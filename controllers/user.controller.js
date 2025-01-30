@@ -83,8 +83,9 @@ const userController = ({
         if (check) {
             return res.status(404).json('Email Already User! Connect Yourself');
         }
-        const hashed = bcrypt.hash(password, 10);
+        const hashed = await bcrypt.hash(password, 10);
 
+        console.log(hashed)
         const user = await User.create({
             name,
             email,
