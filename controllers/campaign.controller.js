@@ -192,7 +192,7 @@ const campaignController = ({
             await newContribution.save();
             await campaign.save();
 
-            res.status(200).json({ message: 'Contribution successful', data: response.data});
+            res.status(200).json(response);
         } catch (error) {
             console.log(error);
             res.status(404).json({
