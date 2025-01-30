@@ -112,7 +112,7 @@ const campaignController = ({
                     "merchantCode": merchantCode,
                     "payableCode": paymentItemId,
                     "amount": amount * 100,
-                    "redirectUrl": "http://localhost:8080/api/interswitch/callback",
+                    "redirectUrl": "http://localhost:3000/api/interswitch/callback",
                     "customerId": user.email,
                     "currencyCode": "566",
                     "customerEmail": user.email,
@@ -192,7 +192,7 @@ const campaignController = ({
             await newContribution.save();
             await campaign.save();
 
-            res.status(200).json(response);
+            res.status(200).json(response.data);
         } catch (error) {
             console.log(error);
             res.status(404).json({

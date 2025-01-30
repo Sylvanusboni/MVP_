@@ -114,12 +114,10 @@ const interswitchController = ({
     },
     callback: async(req, res) => {
         try {
+            console.log(req);
             console.log(req.query);
             console.log(req.body);
-            return res.status(200).json({
-                query: req.query,
-                body: req.body
-            });
+            return res.redirect('http://localhost:3000/api/interswitch/callback');
             //https://qa.interswitchng.com/paymentgateway/api/v1/paybill
         } catch (error) {
             return res.status(404).json('Callback Error');

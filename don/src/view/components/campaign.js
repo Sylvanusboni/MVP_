@@ -69,13 +69,46 @@ const ExpandMore = styled((props) => {
     setExpanded(!expanded);
   };
 
-  const handleDonate = async () => {
+//   const handleDonate = async () => {
+//     if (!amount || amount <= 0) {
+//       alert("Please enter a valid amount.");
+//       return;
+//     }
+  
+//     try {
+//       const response = await fetch(`${API_BASE_URL}/donate/?userId=${user}`, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           campaignId: campaign._id,
+//           amount: amount,
+//         }),
+//       });
+  
+//       const data = await response.json();
+  
+//       if (response.ok) {
+//         alert("Donation successful!");
+//         setOpen(false);
+//       } else {
+//         alert(`Error: ${data.message || "Failed to donate"}`);
+//       }
+//     } catch (error) {
+//       console.error("Error donating:", error);
+//       alert("An error occurred while processing your donation.");
+//     }
+//   };
+  
+const handleDonate = async () => {
     if (!amount || amount <= 0) {
       alert("Please enter a valid amount.");
       return;
     }
   
     try {
+      // Step 1: Send request to backend to initiate payment
       const response = await fetch(`${API_BASE_URL}/donate/?userId=${user}`, {
         method: "POST",
         headers: {
@@ -88,15 +121,18 @@ const ExpandMore = styled((props) => {
       });
   
       const data = await response.json();
+      localStorage.setItem('amount', data.amount);
+      localStorage.setItem('transactionReference', data.transactionReference);
+
   
       if (response.ok) {
-        alert("Donation successful!");
-        setOpen(false);
+        // Step 2: Redirect user to the payment page URL
+        window.location.href = data.paymentUrl; // Redirect to payment gateway
       } else {
-        alert(`Error: ${data.message || "Failed to donate"}`);
+        alert(`Error: ${data.message || "Failed to initiate donation"}`);
       }
     } catch (error) {
-      console.error("Error donating:", error);
+      console.error("Error during donation initiation:", error);
       alert("An error occurred while processing your donation.");
     }
   };
