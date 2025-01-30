@@ -11,7 +11,7 @@ const campaignController = ({
                 title,
                 description,
                 goalAmount,
-                createdBy: req.query.userId || req.user.id,
+                createdBy: req.query.userId,
                 images
             });
 
@@ -36,6 +36,7 @@ const campaignController = ({
                 createdBy: user._id,
                 deleted: false
             }).select('title description goalAmount collectedAmount status createdAt updatedAt');
+
             return res.status(200).json(campaigns);
         } catch(error) {
             return res.status(404).json(error);
@@ -54,9 +55,9 @@ const campaignController = ({
     },
     donateToCampaign: async (req, res) => {
         try {
-            const { campaignId, userId, amount } = req.body;
+            const {campaignId, userId, amount} = req.body;
             const campaign = await Campaign.findById(campaignId);
-    
+
             if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
     
             campaign.collectedAmount += amount;
