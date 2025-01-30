@@ -37,33 +37,31 @@ const sendEmail = async (destinataire, sujet, message) => {
 
 async function comparePassword(password, user, res)
 {
-    await bcrypt.compare(password, user.password)
-        .then(goodPassword => {
-            if (goodPassword) {
-                const payload = {
-                    name: user.name,
-                    id: user._id,
-                    email: user.email
-                };
-
-                const result = jwt.sign(payload, process.env.JWT_SECRET_KEY, {expiresIn: '1h'}, (err, token) => {
-                    return {
-                        token: token,
-                        id: user._id,
-                        email: user.email,
-                        name: user.name
-                    };
-                });
-            } else {
-                return null;
-            }
-    })
+    const check = await bcrypt.compare(password, user.password);
+    console.log(check);
+    if (check) {
+        console.log('Good Password');
+        const payload = {
+            name: user.name,
+            id: user._id,
+            email: user.email
+        };
+    
+        const token = generateJwtToken(user);
+            return {
+                token: token,
+                id: user._id,
+                email: user.email,
+                name: user.name
+            };
+    }
+    return null;
 }
 
 function generateJwtToken(user) {
     const payload = {
         name: user.name,
-        id: user.id,
+        id: user._id,
         email: user.email
     }
     return jwt.sign(payload, process.env.JWT_SECRET_KEY, {expiresIn: '1h'});
@@ -86,14 +84,16 @@ const userController = ({
         const hashed = await bcrypt.hash(password, 10);
 
         console.log(hashed)
-        const user = await User.create({
+        let user = await User.create({
             name,
             email,
             phone,
             password: hashed,
         });
+        console.log("|", user.password, "|", password, "|");
         user.token = generateJwtToken(user);
         await user.save();
+        console.log(user);
         return res.status(200).json(user);
     },
     login: async(req, res) => {
@@ -107,11 +107,15 @@ const userController = ({
             if (!user) {
                 return res.status(404).json('Unknown email! Please Sign Up');
             }
-            const ct = comparePassword(password, user, res);
+            console.log("|", user.password, "|", password, "|");
+            const ct = await comparePassword(password, user, res);
+            console.log(ct);
             if (!ct) {
                 return res.status(404).json('Invalid Password');
             }
             user.token = ct.token;
+            await user.save();
+            console.log(user, ct);
             return res.status(200).json({
                 _id: user._id,
                 token: user.token,

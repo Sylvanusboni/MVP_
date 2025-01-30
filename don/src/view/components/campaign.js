@@ -1,0 +1,372 @@
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
+  CircularProgress,
+  Box,
+  Tabs,
+  Tab,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
+import {CardHeader, CardActions, Collapse, Avatar, IconButton} from "@mui/material";
+import { red } from "@mui/material/colors";
+import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
+import ShareIcon from "@mui/icons-material/Share";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+
+const API_BASE_URL = "http://localhost:8080/api/campaign";
+
+
+const ExpandMore = styled((props) => {
+  const { expand, ...other } = props;
+  return <IconButton {...other} />;
+})(({ theme, expand }) => ({
+  marginLeft: "auto",
+  transition: theme.transitions.create("transform", {
+    duration: theme.transitions.duration.shortest,
+  }),
+  transform: expand ? "rotate(180deg)" : "rotate(0deg)",
+}));
+
+ function CampaignCard({ campaign }) {
+  const [expanded, setExpanded] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [open, setOpen] = useState(false);
+  const [openDonate, setOpenDonate] = useState(false);
+  const [amount, setAmount] = useState("");
+  const user = localStorage.getItem("userId");
+
+
+  const handleDonateClick = () => {
+    setOpenDonate(true);
+  };
+
+  const handleShare = () => {
+    // Generate the shareable link
+    const link = `${window.location.origin}/donate/${campaign._id}`;
+    setShareLink(link);
+    setOpen(true);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareLink);
+    alert("Link copied to clipboard!");
+  };
+  const handleExpandClick = () => {
+    setExpanded(!expanded);
+  };
+
+  const handleDonate = async () => {
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+  
+    try {
+      const response = await fetch(`${API_BASE_URL}/donate/?userId=${user}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignId: campaign._id,
+          amount: amount,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        alert("Donation successful!");
+        setOpen(false);
+      } else {
+        alert(`Error: ${data.message || "Failed to donate"}`);
+      }
+    } catch (error) {
+      console.error("Error donating:", error);
+      alert("An error occurred while processing your donation.");
+    }
+  };
+  
+  return (
+    <Card sx={{ maxWidth: 345 }}>
+      <CardHeader
+        avatar={<Avatar sx={{ bgcolor: red[500] }}>{campaign.createdBy?campaign.createdBy.name[0] : ""}</Avatar>}
+        action={
+          <IconButton aria-label="settings">
+            <MoreVertIcon />
+          </IconButton>
+        }
+        title={campaign.title}
+        subheader={new Date(campaign.createdAt).toLocaleDateString()}
+      />
+      <CardMedia
+        component="img"
+        height="194"
+        image={campaign.images.length > 0 ? campaign.images[0] : "/default-image.jpg"}
+        alt={campaign.title}
+      />
+      <CardContent>
+        <Typography variant="body2" color="text.secondary">
+          {campaign.description}
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 1 }}>
+          Raised: ₦{campaign.collectedAmount} / ₦{campaign.goalAmount}
+        </Typography>
+      </CardContent>
+      <CardActions disableSpacing>
+        <IconButton aria-label="add to favorites" onClick={handleDonateClick}>
+          <VolunteerActivismIcon />
+        </IconButton>
+        <IconButton aria-label="share" onClick={handleShare}>
+          <ShareIcon />
+        </IconButton>
+        <ExpandMore
+          expand={expanded}
+          onClick={handleExpandClick}
+          aria-expanded={expanded}
+          aria-label="show more"
+        >
+          <ExpandMoreIcon />
+        </ExpandMore>
+      </CardActions>
+      <Collapse in={expanded} timeout="auto" unmountOnExit>
+        <CardContent>
+          <Typography sx={{ marginBottom: 2 }} variant="h6">
+            Contributors:
+          </Typography>
+          {campaign.contributors.length > 0 ? (
+            campaign.contributors.map((contributor, index) => (
+              <Typography key={index} variant="body2">
+                {contributor.name} - {contributor.email}
+              </Typography>
+            ))
+          ) : (
+            <Typography variant="body2">No contributors yet.</Typography>
+          )}
+          <Typography sx={{ marginTop: 2 }} variant="h6">
+            External Contributions:
+          </Typography>
+          {campaign.externalContributions.length > 0 ? (
+            campaign.externalContributions.map((external, index) => (
+              <Typography key={index} variant="body2">
+                {external.name} - {external.amount}
+              </Typography>
+            ))
+          ) : (
+            <Typography variant="body2">No external contributions.</Typography>
+          )}
+        </CardContent>
+      </Collapse>
+           {/* Share Dialog */}
+           <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Share this Campaign</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            value={shareLink}
+            variant="outlined"
+            sx={{ mt: 2, mb: 2 }}
+            InputProps={{
+                readOnly: true,
+                sx: { pr: 1 }, // Adds padding to prevent overlap
+                endAdornment: (
+                <IconButton onClick={handleCopy} edge="end">
+                    <ContentCopyIcon />
+                </IconButton>
+                ),
+            }}
+            />
+        </DialogContent>
+      </Dialog>
+      {/* Donate Dialog */}
+      <Dialog open={openDonate} onClose={() => setOpenDonate(false)}>
+        <DialogTitle>Donate to {campaign.title}</DialogTitle>
+        <DialogContent>
+            <TextField
+            label="Amount"
+            type="number"
+            fullWidth
+            margin="dense"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            />
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={() => setOpenDonate(false)} color="secondary">
+            Cancel
+            </Button>
+            <Button onClick={handleDonate} variant="contained" color="primary">
+            Donate
+            </Button>
+        </DialogActions>
+        </Dialog>
+
+    </Card>
+  );
+}
+
+export default function CampaignPage() {
+  const [campaigns, setCampaigns] = useState([]);
+  const [userCampaigns, setUserCampaigns] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState(0);
+  const [newCampaign, setNewCampaign] = useState({
+    title: "",
+    description: "",
+    goalAmount: "",
+    images: [],
+  });
+
+  const user = localStorage.getItem("userId");
+
+  const fetchCampaigns = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(API_BASE_URL);
+      setCampaigns(res.data || []);
+      console.log(res.data);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchUserCampaigns = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/?userId=${user}`);
+      setUserCampaigns(res.data || []);
+    } catch (error) {
+      console.error("Error fetching user campaigns:", error);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchCampaigns();
+    fetchUserCampaigns();
+  }, [fetchCampaigns, fetchUserCampaigns]);
+
+  const handleCreateCampaign = async () => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/create/?userId=${user}`, {
+        ...newCampaign,
+      });
+
+      setCampaigns((prev) => [...prev, res.data.data]);
+      setUserCampaigns((prev) => [...prev, res.data.data]);
+      setOpen(false);
+      setNewCampaign({ title: "", description: "", goalAmount: "" });
+    } catch (error) {
+      console.error("Error creating campaign:", error);
+    }
+  };
+
+  const campaignsToDisplay = tab === 0 ? campaigns : userCampaigns;
+
+  return (
+    <Container>
+      <Box sx={{ display: "flex", justifyContent: "space-between", my: 3 }}>
+        <Typography variant="h4">Campaigns</Typography>
+        <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
+          Create Campaign
+        </Button>
+      </Box>
+
+      <Tabs value={tab} onChange={(_, newValue) => setTab(newValue)} sx={{ mb: 3 }}>
+        <Tab label="All Campaigns" />
+        <Tab label="My Campaigns" />
+      </Tabs>
+
+      {loading ? (
+        <Box display="flex" justifyContent="center">
+          <CircularProgress />
+        </Box>
+      ) : campaignsToDisplay.length === 0 ? (
+        <Typography variant="h6" align="center" sx={{ mt: 3 }}>
+          No data available
+        </Typography>
+      ) : (
+        // <Grid container spacing={3}>
+        //   {campaignsToDisplay.map((campaign) => (
+        //     <Grid item xs={12} sm={6} md={4} key={campaign._id}>
+        //       <Card>
+        //         <CardMedia component="img" height="180" image="/default-image.jpg" />
+        //         <CardContent>
+        //           <Typography variant="h6">{campaign.title}</Typography>
+        //           <Typography variant="body2">{campaign.description}</Typography>
+        //           <Typography variant="subtitle2">
+        //             Raised: ₦{campaign.collectedAmount} / ₦{campaign.goalAmount}
+        //           </Typography>
+        //           <Button variant="outlined" color="primary" fullWidth>
+        //             View Details
+        //           </Button>
+        //         </CardContent>
+        //       </Card>
+        //     </Grid>
+        //   ))}
+        // </Grid>
+        <Grid container spacing={3}>
+            {campaignsToDisplay.map((campaign) => (
+                <Grid item xs={12} sm={6} md={4} key={campaign._id}>
+                <CampaignCard campaign={campaign} />
+                </Grid>
+            ))}
+        </Grid>
+
+      )}
+
+      {/* Create Campaign Dialog */}
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Create a Campaign</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Title"
+            fullWidth
+            margin="dense"
+            value={newCampaign.title}
+            onChange={(e) => setNewCampaign((prev) => ({ ...prev, title: e.target.value }))}
+          />
+          <TextField
+            label="Description"
+            fullWidth
+            margin="dense"
+            value={newCampaign.description}
+            onChange={(e) => setNewCampaign((prev) => ({ ...prev, description: e.target.value }))}
+          />
+          <TextField
+            label="Goal Amount"
+            type="number"
+            fullWidth
+            margin="dense"
+            value={newCampaign.goalAmount}
+            onChange={(e) => setNewCampaign((prev) => ({ ...prev, goalAmount: e.target.value }))}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleCreateCampaign} variant="contained" color="primary">
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
+}

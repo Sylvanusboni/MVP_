@@ -162,11 +162,11 @@ const campaignController = ({
             const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
 
             const headers = {
-                Authorization: `Bearer ${data.token}`,
+                Authorization: `Bearer ${data.access_token}`,
                 "Content-Type": "application/json",
                 "accept": "application/json"
             }
-            const transactionReference = `MVP-CPN-${Date.now}`;
+            const transactionReference = `MVP-CPN-${Date.now()}`;
             const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
                     "merchantCode": merchantCode,
                     "payableCode": paymentItemId,
@@ -179,7 +179,8 @@ const campaignController = ({
                 },
                 {headers}
             );
-
+            console.log(response);
+            console.log(response.data);
             const newContribution = await Transaction.create({
                 amount,
                 transactionReference: transactionReference,
@@ -193,6 +194,7 @@ const campaignController = ({
 
             res.status(200).json({ message: 'Contribution successful', data: response.data});
         } catch (error) {
+            console.log(error);
             res.status(404).json({
                 message: 'Donnation Error',
                 error: error.message
