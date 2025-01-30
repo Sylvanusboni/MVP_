@@ -116,7 +116,11 @@ const interswitchController = ({
         try {
             console.log(req.query);
             console.log(req.body);
-            return res.status(200).json('Got it');
+            return res.status(200).json({
+                query: req.query,
+                body: req.body
+            });
+            //https://qa.interswitchng.com/paymentgateway/api/v1/paybill
         } catch (error) {
             return res.status(404).json('Callback Error');
         }
