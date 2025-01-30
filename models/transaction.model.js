@@ -4,7 +4,7 @@ const TransactionSchema = new mongoose.Schema({
     date: {type: Date, default: Date.now},
     amount: Number,
     transactionReference: String,
-    status: {type: String, enum: ['pending', 'failed', 'success'], default: 'pending'},
+    status: {type: String, enum: ['pending', 'failed', 'completed'], default: 'pending'},
     campaignId: {type: mongoose.Schema.Types.ObjectId, ref: 'Campaign'},
     tontineId: {type: mongoose.Schema.Types.ObjectId, ref: 'TontineGroupe'},
     tontineCycle: {type: mongoose.Schema.Types.ObjectId, ref: 'TontineCycle'},

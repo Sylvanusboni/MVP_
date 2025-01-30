@@ -2,7 +2,9 @@ const Transaction = require('../models/transaction.model');
 const TontineCycle = require('../models/Tontine/cycle.model');
 const TontineGroup = require('../models/Tontine/group.model');
 const ContributionGroup = require('../models/Contribution/group.model');
+const Campaign = require('../models/campaign.model');
 const axios = require('axios');
+const { externalContribution } = require('./campaign.controller');
 
 function getAuthHeader(clientId, secretKey) {
     return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
@@ -42,6 +44,13 @@ const transactionController = ({
             if (!transactionReference || !amount) {
                 return res.status(404).json('Need Trans Reference and Amount to confirm');
             }
+
+            const transaction = await Transaction.findOne({transactionReference: transactionReference});
+
+            if (!transaction) {
+                return res.status(404).json('UnknownTransaction');
+            }
+
             const data = generateToken();
             const merchantCode = data.merchant_code;
             const headers = {
@@ -53,7 +62,47 @@ const transactionController = ({
                 {headers}
             );
 
-            
+            if (response.ResponseCode !== "00") {
+                transaction.status = 'failed';
+            } else {
+                if (transaction.campaignId) {
+                    const campaign = await Campaign.findById(transaction.campaignId);
+
+                    if (!campaign)
+                        return res.status(404).json("Campaign not found");
+                    if (transaction.user) {
+                        const userCampaign = campaign.contributors.find(it => it.userId.toString() === transaction.user.toString());
+                        if (userCampaign) {
+                            userCampaign.amount += amount;
+                        } else {
+                            campaign.contributors.push({
+                                userId: transaction.user,
+                                amount: amount
+                            })
+                        }
+                    } else {
+                        const extUser = campaign.externalContributions.find(it => it.email === email);
+                        if (extUser) {
+                            extUser.amount += amount;
+                        } else {
+                            campaign.externalContributions.push({
+                                email: email,
+                                amount: amount
+                            })
+                        }
+                    }
+                    await campaign.save();
+                }
+                if (transaction.tontineId && transaction.tontineCycle) {
+
+                }
+                if (transaction.contribution) {
+
+                }
+            }
+
+            return res.status(200).json();
+
         } catch (error) {
             return res.status(404).json(error);
         }
@@ -65,4 +114,6 @@ const transactionController = ({
             return res.status(404).json(error);
         }
     }
-})
+});
+
+module.exports = transactionController;
