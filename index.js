@@ -20,5 +20,7 @@ app.use('/api/interswitch', require('./routes/interswitch.route'));
 
 app.use('/api/user', require('./routes/user.route'));
 
+app.use('/api/campaign', require('./routes/campaign.route'));
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

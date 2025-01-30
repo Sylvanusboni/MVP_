@@ -6,7 +6,7 @@ const router = express.Router();
 router.post('/create', campaignController.create);
 router.get('/', campaignController.get);
 router.get('/', campaignController.getUserCampaigns);
-router.post('/donate', donateToCampaign);
-router.post('/contribute', contributeToCampaign);
+router.post('/donate', campaignController.donateToCampaign);
+router.post('/contribute', campaignController.externalContribution);
 
 module.exports = router;

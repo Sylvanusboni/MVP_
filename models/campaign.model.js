@@ -21,7 +21,8 @@ const CampaignSchema = new mongoose.Schema({
     createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
     createdAt: {type: Date, default: Date.now},
     updatedAt: {type: Date, default: Date.now},
-    deleted: {type: Boolean, default: false}
+    deleted: {type: Boolean, default: false},
+    images: [String]
 });
 
 module.exports = mongoose.model('Campaign', CampaignSchema);
