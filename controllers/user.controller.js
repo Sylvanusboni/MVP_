@@ -70,7 +70,7 @@ function generateJwtToken(user) {
 
 const userController = ({
     signUp: async(req, res) => {
-        const {name, surname, email, phone, password} = req.body;
+        const {name, email, phone, password} = req.body;
 
         if (!name || !password || !email) {
             return res.status(404).json('Please Fill the fields');
@@ -92,7 +92,7 @@ const userController = ({
         });
         user.token = generateJwtToken(user);
         await user.save();
-        return res.status(200).json(error);
+        return res.status(200).json(user);
     },
     login: async(req, res) => {
         try {
@@ -114,7 +114,8 @@ const userController = ({
                 _id: user._id,
                 token: user.token,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                phone: user.phone
             })
         } catch (error) {
             return res.status(404).json(error);
@@ -139,3 +140,5 @@ const userController = ({
 
     }
 })
+
+module.exports = userController;
