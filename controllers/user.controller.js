@@ -35,9 +35,9 @@ const sendEmail = async (destinataire, sujet, message) => {
     }
 };
 
-function comparePassword(password, user, res)
+async function comparePassword(password, user, res)
 {
-    bcrypt.compare(password, user.password)
+    await bcrypt.compare(password, user.password)
         .then(goodPassword => {
             if (goodPassword) {
                 const payload = {
@@ -107,7 +107,7 @@ const userController = ({
             if (!user) {
                 return res.status(404).json('Unknown email! Please Sign Up');
             }
-            const ct = comparePassword(user.password, user, res);
+            const ct = comparePassword(password, user, res);
             if (!ct) {
                 return res.status(404).json('Invalid Password');
             }
