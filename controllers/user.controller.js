@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 function validMail(email) {
     return true;
@@ -45,7 +46,7 @@ function comparePassword(password, user, res)
                     email: user.email
                 };
 
-                const result = jwt.sign(payload, secret_key, {expiresIn: '1h'}, (err, token) => {
+                const result = jwt.sign(payload, process.env.JWT_SECRET_KEY, {expiresIn: '1h'}, (err, token) => {
                     return {
                         token: token,
                         id: user._id,
@@ -65,7 +66,7 @@ function generateJwtToken(user) {
         id: user.id,
         email: user.email
     }
-    return jwt.sign(payload, secret_key, {expiresIn: '1h'});
+    return jwt.sign(payload, process.env.JWT_SECRET_KEY, {expiresIn: '1h'});
 }
 
 const userController = ({
