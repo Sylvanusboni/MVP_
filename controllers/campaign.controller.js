@@ -5,17 +5,21 @@ const User = require('../models/user.model');
 const campaignController = ({
     create: async (req, res) => {
         try {
-            const {title, description, goalAmount} = req.body;
+            const {title, description, goalAmount, images} = req.body;
 
             const newCampaign = new Campaign({
                 title,
                 description,
                 goalAmount,
-                createdBy: req.user.id || req.query.userId,
+                createdBy: req.query.userId || req.user.id,
+                images
             });
 
             await newCampaign.save();
-            res.status(200).json({ message: 'Campaign created successfully', data: newCampaign});
+            res.status(200).json({
+                message: 'Campaign created successfully',
+                data: newCampaign
+            });
         } catch (error) {
             res.status(404).json({ message: 'Server Error', error: error.message});
         }
