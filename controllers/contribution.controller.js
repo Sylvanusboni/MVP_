@@ -43,7 +43,7 @@ const contributionController = ({
     createGroup: async(req, res) => {
         try {
             const { name, description, frequency, contributionAmount } = req.body;
-    
+
             const newGroup = new ContributionGroup({
                 name,
                 description,
@@ -51,7 +51,7 @@ const contributionController = ({
                 frequency,
                 contributionAmount,
             });
-    
+
             await newGroup.save();
             res.status(200).json({ message: 'Group created successfully', data: newGroup });
         } catch (error) {

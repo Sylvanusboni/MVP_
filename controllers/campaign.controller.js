@@ -1,6 +1,39 @@
 const Campaign = require('../models/campaign.model');
 const Contribution = require('../models/contribution.model');
 const User = require('../models/user.model');
+const Transaction = require('../models/transaction.model');
+const axios = require('axios');
+
+function getAuthHeader(clientId, secretKey) {
+    return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
+}
+
+async function generateToken() {
+    const clientId = process.env.INTERSWITCH_CLIENT_ID;
+    const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+
+    const headers = {
+        'Authorization': getAuthHeader(clientId, secretKey),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'accept': 'application/json'
+    };
+
+    try {
+        // 'https://sandbox.interswitchng.com/passport/oauth/token?env=test',
+        const response = await axios.post(
+            'https://passport.k8.isw.la/passport/oauth/token?grant_type=client_credentials',
+            'grant_type=client_credentials',
+            {
+                headers
+            }
+        );
+        console.log(response.data);
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        console.error('Error generating token:', error);
+    }
+};
 
 const campaignController = ({
     create: async (req, res) => {
@@ -53,18 +86,54 @@ const campaignController = ({
             res.status(404).json({message: 'Campaign getting error', error: error.message});
         }
     },
-    donateToCampaign: async (req, res) => {
+    externalContribution: async (req, res) => {
         try {
-            const {campaignId, userId, amount} = req.body;
+            const {campaignId, email, amount} = req.body;
             const campaign = await Campaign.findById(campaignId);
+            
+            if (!campaign) return res.status(404).json({ message: 'Campaign not found'});
 
-            if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
-    
-            campaign.collectedAmount += amount;
-            campaign.contributors.push({userId, amount});
-            await campaign.save();
+            const user = await User.findOne({email: email});
+            const sub = false;
+            if (user)
+                sub = true;
 
-            res.status(200).json({message: 'Donation successful', data: campaign});    
+            const data = await generateToken();
+            const merchantCode = data.merchant_code;
+            const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
+
+            const headers = {
+                Authorization: `Bearer ${data.token}`,
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            }
+            const transactionReference = `MVP-CPN-${Date.now}`;
+            const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
+                    "merchantCode": merchantCode,
+                    "payableCode": paymentItemId,
+                    "amount": amount * 100,
+                    "redirectUrl": "http://localhost:8080/api/interswitch/callback",
+                    "customerId": user.email,
+                    "currencyCode": "566",
+                    "customerEmail": user.email,
+                    "transactionReference": transactionReference
+                },
+                {headers}
+            );
+            const newContribution = await Transaction.create({
+                amount,
+                transactionReference: transactionReference,
+                campaignId: campaign._id,
+                user: (user) ? user._id : null,
+                external: (user) ? false : true,
+                email: email
+            });
+
+            // campaign.collectedAmount += amount;
+            // campaign.contributors.push({userId, amount});
+            // await campaign.save();
+
+            res.status(200).json({message: 'Donation successful', data: response});
         } catch (error) {
             res.status(404).json({
                 message: 'Donnation Error',
@@ -72,26 +141,57 @@ const campaignController = ({
             });
         }
     },
-    externalContribution: async (req, res) => {
+    donateToCampaign: async (req, res) => {
         try {
-            const { campaignId, amount, email } = req.body;
+            const { campaignId, amount} = req.body;
+            const userId = req.query.userId;
+
+            if (!userId || !campaignId || !amount) {
+                return res.status(404).json('Fill the fields');
+            }
 
             const campaign = await Campaign.findById(campaignId);
-            if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
-    
-            const newContribution = new Contribution({
-                campaignId,
-                email,
+            if (!campaign)
+                return res.status(404).json({message: 'Campaign not found'});
+            const user = await User.findById(userId);
+            if (!user)
+                return res.status(404).json('Undefined User');
+
+            const data = await generateToken();
+            const merchantCode = data.merchant_code;
+            const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
+
+            const headers = {
+                Authorization: `Bearer ${data.token}`,
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            }
+            const transactionReference = `MVP-CPN-${Date.now}`;
+            const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
+                    "merchantCode": merchantCode,
+                    "payableCode": paymentItemId,
+                    "amount": amount * 100,
+                    "redirectUrl": "http://localhost:8080/api/interswitch/callback",
+                    "customerId": user.email,
+                    "currencyCode": "566",
+                    "customerEmail": user.email,
+                    "transactionReference": transactionReference
+                },
+                {headers}
+            );
+
+            const newContribution = await Transaction.create({
                 amount,
+                transactionReference: transactionReference,
+                campaignId: campaign._id,
+                user: user._id
             });
-    
+            
+            console.log(response);
             await newContribution.save();
-    
-            campaign.collectedAmount += amount;
-            campaign.externalContributions.push({ email, amount });
             await campaign.save();
-    
-            res.status(200).json({ message: 'Contribution successful', data: newContribution });
+
+            res.status(200).json({ message: 'Contribution successful', data: response.data});
         } catch (error) {
             res.status(404).json({
                 message: 'Donnation Error',
