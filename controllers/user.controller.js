@@ -112,7 +112,7 @@ const userController = ({
                 return res.status(404).json('Invalid Password');
             }
             user.token = ct.token;
-            return res.status(404).json({
+            return res.status(200).json({
                 _id: user._id,
                 token: user.token,
                 name: user.name,
