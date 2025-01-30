@@ -5,8 +5,8 @@ const User = require('../models/user.model');
 const campaignController = ({
     create: async (req, res) => {
         try {
-            const { title, description, goalAmount } = req.body;
-            
+            const {title, description, goalAmount} = req.body;
+
             const newCampaign = new Campaign({
                 title,
                 description,
@@ -15,7 +15,7 @@ const campaignController = ({
             });
 
             await newCampaign.save();
-            res.status(200).json({ message: 'Campaign created successfully', data: newCampaign });
+            res.status(200).json({ message: 'Campaign created successfully', data: newCampaign});
         } catch (error) {
             res.status(404).json({ message: 'Server Error', error: error.message});
         }
@@ -41,9 +41,9 @@ const campaignController = ({
         try {
             const page = req.query.page || 1;
             const limits = req.query.limit || 10;
-    
+
             const campaigns = await Campaign.find().limit(limits).skip((page - 1) * limits).populate('createdBy', 'name email');
-            res.status(200).json(campaigns);    
+            res.status(200).json(campaigns);
         } catch (error) {
             res.status(404).json({message: 'Campaign getting error', error: error.message});
         }
