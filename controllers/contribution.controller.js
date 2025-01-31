@@ -1,4 +1,5 @@
 const Contribution = require('../models/Contribution/contribution.model');
+const groupModel = require('../models/Contribution/group.model');
 const ContributionGroup = require('../models/Contribution/group.model');
 const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
@@ -42,7 +43,7 @@ async function sendInvitation(groupType, sender, groupId, dest)
 const contributionController = ({
     createGroup: async(req, res) => {
         try {
-            const { name, description, frequency, contributionAmount } = req.body;
+            const {name, description, frequency, contributionAmount} = req.body;
 
             const newGroup = new ContributionGroup({
                 name,
@@ -53,9 +54,9 @@ const contributionController = ({
             });
 
             await newGroup.save();
-            res.status(200).json({ message: 'Group created successfully', data: newGroup });
+            res.status(200).json({ message: 'Group created successfully', data: newGroup});
         } catch (error) {
-            res.status(404).json({ message: 'Server Error', error: error.message });
+            res.status(404).json({ message: 'Server Error', error: error.message});
         }
     },
     update:async(req, res) => {
@@ -91,10 +92,14 @@ const contributionController = ({
             if (!user)
                 return res.status(404).json('Unknown User');
             const groups = await ContributionGroup.find({members: {userId: userId}});
+            const admins = await ContributionGroup.find({admin: user._id});
 
-            console.log('My groups: ', groups);
+            console.log('My groups: ', groupModel, admins);
 
-            return res.status(200).json(groups);
+            return res.status(200).json({
+                groups: groupes,
+                admins: admins
+            });
         } catch (error) {
             return res.status(404).json({error: error});
         }
@@ -155,6 +160,9 @@ const contributionController = ({
         }
     }
 })
+
+
+module.exports = contributionController;
 
 //Model Asking
 //Data 

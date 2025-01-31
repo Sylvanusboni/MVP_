@@ -106,6 +106,7 @@ const invitationController = ({
         } catch (error) {
             return res.status(404).json(error);
         }
-    },
-    
+    },  
 })
+
+module.exports = invitationController;

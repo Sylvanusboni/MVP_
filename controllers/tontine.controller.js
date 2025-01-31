@@ -205,8 +205,16 @@ const TontineController = ({
             if (!tontine)
                 return res.status(404).json('Undefined Tontine');
             
-            const {beneficiary} = req.body;
-
+            const {beneficiary} = req.body; //new Beneficiary Id
+            const beneficiaryOldCycle = await TontineCycle.findOne({beneficiary: beneficiary});
+            if (!beneficiaryOldCycle) {
+                return res.status(404).json('Unknown Beneficiary');
+            }
+            beneficiaryOldCycle.beneficiary = cycle.beneficiary;
+            cycle.beneficiary = beneficiary;
+            await beneficiaryOldCycle.save();
+            await cycle.save();
+            await tontine.save();
             //Change le bénéficiaire et interchanger sa place avec celui dont il prend le tour
         } catch (error) {
             return res.status(404).json(error)

@@ -6,7 +6,7 @@ const TontineGroup = new mongoose.Schema({
     members: [{
             userId: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
             status: {type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending'},
-            beneficiary: {type: Boolean, default: false}
+            benefited: {type: Boolean, default: false}
         }
     ],
     contributionAmount: Number,
