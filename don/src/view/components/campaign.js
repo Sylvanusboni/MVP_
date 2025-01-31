@@ -42,12 +42,14 @@ const ExpandMore = styled((props) => {
 }));
 
  function CampaignCard({ campaign }) {
+  console.log('Campaign contributors:', campaign.contributors);
   const [expanded, setExpanded] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [open, setOpen] = useState(false);
   const [openDonate, setOpenDonate] = useState(false);
   const [amount, setAmount] = useState("");
   const user = localStorage.getItem("userId");
+  const [loading, setLoading] = useState(false);
 
 
   const handleDonateClick = () => {
@@ -106,7 +108,8 @@ const handleDonate = async () => {
       alert("Please enter a valid amount.");
       return;
     }
-  
+
+    setLoading(true);
     try {
       // Step 1: Send request to backend to initiate payment
       const response = await fetch(`${API_BASE_URL}/donate/?userId=${user}`, {
@@ -126,6 +129,7 @@ const handleDonate = async () => {
 
   
       if (response.ok) {
+        setOpen(false);
         // Step 2: Redirect user to the payment page URL
         window.location.href = data.paymentUrl; // Redirect to payment gateway
       } else {
@@ -136,6 +140,15 @@ const handleDonate = async () => {
       alert("An error occurred while processing your donation.");
     }
   };
+
+  // Function to format large numbers
+const formatNumber = (num) => {
+  if (num >= 1e12) return `₦${(num / 1e12).toFixed(2)}T`; // Trillions
+  if (num >= 1e9) return `₦${(num / 1e9).toFixed(2)}B`;  // Billions
+  if (num >= 1e6) return `₦${(num / 1e6).toFixed(2)}M`;  // Millions
+  if (num >= 1e3) return `₦${(num / 1e3).toFixed(2)}K`;  // Thousands
+  return `₦${num.toLocaleString()}`; // Default formatted number
+};
   
   return (
     <Card sx={{ maxWidth: 345 }}>
@@ -152,24 +165,27 @@ const handleDonate = async () => {
       <CardMedia
         component="img"
         height="194"
-        image={campaign.images.length > 0 ? campaign.images[0] : "/default-image.jpg"}
+        image={(campaign.images || []).length > 0 ? campaign.images[0] : "https://images.unsplash.com/photo-1471357674240-e1a485acb3e1"}
         alt={campaign.title}
+        sx={{marginTop: 2, marginBottom: 2}}
       />
       <CardContent>
         <Typography variant="body2" color="text.secondary">
           {campaign.description}
         </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 1 }}>
-          Raised: ₦{campaign.collectedAmount} / ₦{campaign.goalAmount}
+        <Typography variant="subtitle2" sx={{ mt: 1, marginBottom: 1 }}>
+          Raised: {formatNumber(campaign.collectedAmount)} / {formatNumber(campaign.goalAmount)}
         </Typography>
       </CardContent>
       <CardActions disableSpacing>
+        <Box sx={{ gap: 1, display: "flex", alignItems: "center" }}>
         <IconButton aria-label="add to favorites" onClick={handleDonateClick}>
           <VolunteerActivismIcon />
         </IconButton>
         <IconButton aria-label="share" onClick={handleShare}>
           <ShareIcon />
         </IconButton>
+        </Box>
         <ExpandMore
           expand={expanded}
           onClick={handleExpandClick}
@@ -181,10 +197,10 @@ const handleDonate = async () => {
       </CardActions>
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <CardContent>
-          <Typography sx={{ marginBottom: 2 }} variant="h6">
+          <Typography sx={{ marginBottom: 2, marginTop: 2 }} variant="h6">
             Contributors:
           </Typography>
-          {campaign.contributors.length > 0 ? (
+          {(campaign.contributors || []).length > 0 ? (
             campaign.contributors.map((contributor, index) => (
               <Typography key={index} variant="body2">
                 {contributor.name} - {contributor.email}
@@ -196,7 +212,7 @@ const handleDonate = async () => {
           <Typography sx={{ marginTop: 2 }} variant="h6">
             External Contributions:
           </Typography>
-          {campaign.externalContributions.length > 0 ? (
+          {(campaign.externalContributions || []).length > 0 ? (
             campaign.externalContributions.map((external, index) => (
               <Typography key={index} variant="body2">
                 {external.name} - {external.amount}
@@ -245,8 +261,13 @@ const handleDonate = async () => {
             <Button onClick={() => setOpenDonate(false)} color="secondary">
             Cancel
             </Button>
-            <Button onClick={handleDonate} variant="contained" color="primary">
-            Donate
+            <Button 
+              onClick={handleDonate} 
+              variant="contained" 
+              color="primary" 
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} color="primary" /> : "Donate"}
             </Button>
         </DialogActions>
         </Dialog>
@@ -270,12 +291,13 @@ export default function CampaignPage() {
 
   const user = localStorage.getItem("userId");
 
+
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(API_BASE_URL);
       setCampaigns(res.data || []);
-      console.log(res.data);
+      console.log('All Campaigns',res.data);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
     } finally {
@@ -286,8 +308,9 @@ export default function CampaignPage() {
   const fetchUserCampaigns = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await axios.get(`${API_BASE_URL}/?userId=${user}`);
+      const res = await axios.get(`${API_BASE_URL}/user/?userId=${user}`);
       setUserCampaigns(res.data || []);
+      console.log('User Campaigns',res.data);
     } catch (error) {
       console.error("Error fetching user campaigns:", error);
     }
@@ -330,42 +353,23 @@ export default function CampaignPage() {
       </Tabs>
 
       {loading ? (
-        <Box display="flex" justifyContent="center">
-          <CircularProgress />
-        </Box>
-      ) : campaignsToDisplay.length === 0 ? (
-        <Typography variant="h6" align="center" sx={{ mt: 3 }}>
-          No data available
-        </Typography>
-      ) : (
-        // <Grid container spacing={3}>
-        //   {campaignsToDisplay.map((campaign) => (
-        //     <Grid item xs={12} sm={6} md={4} key={campaign._id}>
-        //       <Card>
-        //         <CardMedia component="img" height="180" image="/default-image.jpg" />
-        //         <CardContent>
-        //           <Typography variant="h6">{campaign.title}</Typography>
-        //           <Typography variant="body2">{campaign.description}</Typography>
-        //           <Typography variant="subtitle2">
-        //             Raised: ₦{campaign.collectedAmount} / ₦{campaign.goalAmount}
-        //           </Typography>
-        //           <Button variant="outlined" color="primary" fullWidth>
-        //             View Details
-        //           </Button>
-        //         </CardContent>
-        //       </Card>
-        //     </Grid>
-        //   ))}
-        // </Grid>
-        <Grid container spacing={3}>
-            {campaignsToDisplay.map((campaign) => (
-                <Grid item xs={12} sm={6} md={4} key={campaign._id}>
+      <Box display="flex" justifyContent="center">
+        <CircularProgress />
+      </Box>
+        ) : (campaignsToDisplay || []).length === 0 ? (
+          <Typography variant="h6" align="center" sx={{ mt: 3 }}>
+            No data available
+          </Typography>
+        ) : (
+          <Grid container spacing={3}>
+            {(campaignsToDisplay || []).map((campaign) => (
+              <Grid item xs={12} sm={6} md={4} key={campaign._id}>
                 <CampaignCard campaign={campaign} />
-                </Grid>
+              </Grid>
             ))}
-        </Grid>
+          </Grid>
+        )}
 
-      )}
 
       {/* Create Campaign Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)}>

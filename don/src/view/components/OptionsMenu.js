@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import Divider, { dividerClasses } from '@mui/material/Divider';
 import Menu from '@mui/material/Menu';
@@ -18,12 +19,18 @@ const MenuItem = styled(MuiMenuItem)({
 export default function OptionsMenu() {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
+  const navigate = useNavigate();
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
   const handleClose = () => {
     setAnchorEl(null);
   };
+  const handleLogOut = () => {
+    localStorage.clear();
+    navigate("/");
+  };
+
   return (
     <React.Fragment>
       <MenuButton
@@ -69,7 +76,7 @@ export default function OptionsMenu() {
           }}
         >
           <ListItemText>Logout</ListItemText>
-          <ListItemIcon>
+          <ListItemIcon onClick={handleLogOut}>
             <LogoutRoundedIcon fontSize="small" />
           </ListItemIcon>
         </MenuItem>
