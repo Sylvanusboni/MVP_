@@ -43,12 +43,12 @@ async function sendInvitation(groupType, sender, groupId, dest)
 const contributionController = ({
     createGroup: async(req, res) => {
         try {
-            const {name, description, frequency, contributionAmount} = req.body;
+            const {name, description, frequency, contributionAmount, admin} = req.body;
 
             const newGroup = new ContributionGroup({
                 name,
                 description,
-                admin: req.user.id,
+                admin,
                 frequency,
                 contributionAmount,
             });
@@ -97,7 +97,7 @@ const contributionController = ({
             console.log('My groups: ', groupModel, admins);
 
             return res.status(200).json({
-                groups: groupes,
+                groups: groups,
                 admins: admins
             });
         } catch (error) {

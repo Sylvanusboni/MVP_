@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.get('/', Invitation.get);
 
-router.post('/view', Integration.viewAll);
+router.post('/view', Invitation.viewAll);
 
 router.get('/group', Invitation.getGroup);
 
