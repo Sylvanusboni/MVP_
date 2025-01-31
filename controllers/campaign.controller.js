@@ -103,23 +103,24 @@ const campaignController = ({
             const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
 
             const headers = {
-                Authorization: `Bearer ${data.token}`,
+                Authorization: `Bearer ${data.access_token}`,
                 "Content-Type": "application/json",
                 "accept": "application/json"
             }
-            const transactionReference = `MVP-CPN-${Date.now}`;
+            const transactionReference = `MVP-ECPN-${Date.now()}`;
             const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
                     "merchantCode": merchantCode,
                     "payableCode": paymentItemId,
                     "amount": amount * 100,
                     "redirectUrl": "http://localhost:8080/api/interswitch/callback",
-                    "customerId": user.email,
+                    "customerId": email,
                     "currencyCode": "566",
-                    "customerEmail": user.email,
+                    "customerEmail": email,
                     "transactionReference": transactionReference
                 },
                 {headers}
             );
+            console.log(response.data);
             const newContribution = await Transaction.create({
                 amount,
                 transactionReference: transactionReference,
@@ -133,8 +134,9 @@ const campaignController = ({
             // campaign.contributors.push({userId, amount});
             // await campaign.save();
 
-            res.status(200).json({message: 'Donation successful', data: response});
+            res.status(200).json(response.data);
         } catch (error) {
+            console.log(error);
             res.status(404).json({
                 message: 'Donnation Error',
                 error: error.message
@@ -179,7 +181,6 @@ const campaignController = ({
                 },
                 {headers}
             );
-            console.log(response);
             console.log(response.data);
             const newContribution = await Transaction.create({
                 amount,
@@ -188,11 +189,10 @@ const campaignController = ({
                 user: user._id
             });
             
-            console.log(response);
             await newContribution.save();
             await campaign.save();
 
-            res.status(200).json(response);
+            res.status(200).json(response.data);
         } catch (error) {
             console.log(error);
             res.status(404).json({

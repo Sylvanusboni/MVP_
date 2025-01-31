@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { TextField, Button, Container, Typography, Box } from "@mui/material";
 
+const API_BASE_URL = "http://localhost:8080/api/campaign";
+
 const DonateForm = () => {
   const { campaignId } = useParams();
   const [formData, setFormData] = useState({ amount: "", email: "" });
@@ -10,10 +12,41 @@ const DonateForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Donation submitted:", { ...formData, campaignId });
-    // Add API call logic here
+  
+    if (!formData.amount || formData.amount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+  
+    try {
+      const response = await fetch(`${API_BASE_URL}/contribute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignId: campaignId,
+          email: formData.email,
+          amount: formData.amount,
+        }),
+      });
+  
+      const data = await response.json();
+      localStorage.setItem("transactionReference", data.transactionReference);
+      localStorage.setItem("amount", formData.amount);
+  
+      if (response.ok) {
+        // Redirect user to the payment page
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(`Error: ${data.message || "Failed to initiate donation"}`);
+      }
+    } catch (error) {
+      console.error("Error submitting donation:", error);
+      alert("An error occurred while processing your donation.");
+    }
   };
 
   return (

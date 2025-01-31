@@ -51,18 +51,19 @@ const transactionController = ({
                 return res.status(404).json('UnknownTransaction');
             }
 
-            const data = generateToken();
+            const data = await generateToken();
             const merchantCode = data.merchant_code;
             const headers = {
                 'Content-Type': 'application/json'
             }
 
-            const response = await axios.post(`https://qa.interswitchng.com/collections/api/v1/gettransaction.json?merchantcode=${merchantCode}&transactionreference=${transactionReference}&amount=${amount}`,
-                '',
+            const response = await axios.get(`https://qa.interswitchng.com/collections/api/v1/gettransaction.json?merchantcode=${merchantCode}&transactionreference=${transactionReference}&amount=${amount}`,
+                'grant_type=client_credentials',
                 {headers}
             );
 
-            if (response.ResponseCode !== "00") {
+            console.log('Transaction status:', response.data);
+            if (response.data.ResponseCode !== "00") {
                 transaction.status = 'failed';
             } else {
                 if (transaction.campaignId) {
@@ -91,6 +92,7 @@ const transactionController = ({
                             })
                         }
                     }
+                    campaign.collectedAmount += amount;
                     await campaign.save();
                 }
                 if (transaction.tontineId && transaction.tontineCycle) {
@@ -101,9 +103,10 @@ const transactionController = ({
                 }
             }
 
-            return res.status(200).json();
+            return res.status(200).json("Good");
 
         } catch (error) {
+            console.log(error);
             return res.status(404).json(error);
         }
     },
