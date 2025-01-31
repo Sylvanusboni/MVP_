@@ -290,7 +290,6 @@ export default function CampaignPage() {
 
   const user = localStorage.getItem("userId");
 
-
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     try {

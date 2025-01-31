@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios'; // Import axios to handle the HTTP request
+import axios from 'axios';
 import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography, Grid, Card, CardContent, Container, CircularProgress, TextField} from '@mui/material';
-
-// Updated Mock Data
-// const mockGroups = [
-//   { id: 1, name: "Groupe A", description: "Monthly savings group", admin: "Alice", frequency: "monthly", contributionAmount: 100, totalCollected: 1000, members: [{ userId: 1, status: "accepted" }, { userId: 2, status: "pending" }] },
-//   { id: 2, name: "Groupe B", description: "Weekly investment club", admin: "Bob", frequency: "weekly", contributionAmount: 50, totalCollected: 500, members: [{ userId: 3, status: "accepted" }] },
-//   { id: 3, name: "Groupe C", description: "Daily emergency fund", admin: "Charlie", frequency: "daily", contributionAmount: 10, totalCollected: 200, members: [{ userId: 4, status: "accepted" }, { userId: 5, status: "accepted" }] },
-// ];
 
 const API_BASE_URL = "http://localhost:8080/api/contribution";
 
@@ -27,14 +20,14 @@ const CotisationList = () => {
     description: '',
     frequency: '',
     contributionAmount: '',
-    admin: userId,  // Add userId here
+    admin: userId,
   });  
  
   const fetchUserGroups = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/user`, { params: { userId: userId } });
       setUserGroups(response.data);
-
+      console.log('Fetched user groups:', response.data);
     } catch (error) {
       console.error('Error fetching user groups:', error);
     }
@@ -44,48 +37,86 @@ const CotisationList = () => {
       fetchUserGroups();
     }, [ fetchUserGroups]);
 
+    // const handleSelectGroup = (groupId) => {
+    //   if (!userGroups || !Array.isArray(userGroups.admins)) {
+    //     console.error("userGroups.admins is not an array:", userGroups);
+    //     return;
+    //   }
+    
+    //   console.log("Searching for groupId:", groupId);
+    //   console.log("Available groups:", userGroups.admins.map(group => group._id));
+    
+    //   const selected = userGroups.admins.find(group => String(group._id) === String(groupId));
+    
+    //   if (!selected) {
+    //     console.warn("No group found with ID:", groupId);
+    //     return;
+    //   }
+    
+    //   setSelectedGroup(selected);
+    //   console.log("Selected Group:", selected);
+    // };
 
     const handleSelectGroup = (groupId) => {
-      if (!userGroups || !Array.isArray(userGroups.admins)) {
-        console.error("userGroups.admins is not an array:", userGroups);
+      if (!userGroups || !Array.isArray(userGroups.groups)) {
+        console.error("userGroups.groups is not an array:", userGroups);
         return;
       }
-    
+  
       console.log("Searching for groupId:", groupId);
-      console.log("Available groups:", userGroups.admins.map(group => group._id));
-    
-      const selected = userGroups.admins.find(group => String(group._id) === String(groupId));
-    
+      console.log("Available groups:", userGroups.groups.map(group => group._id));
+  
+      const selected = userGroups.groups.find(group => String(group._id) === String(groupId));
+  
       if (!selected) {
         console.warn("No group found with ID:", groupId);
         return;
       }
-    
+  
       setSelectedGroup(selected);
       console.log("Selected Group:", selected);
     };
-    
-    
-    
-  const handleInvite = async () => {
-    console.log('Inviting members:', emailsToInvite);
-    setOpenInviteDialog(true);
-    const emailsArray = emailsToInvite.split(',').map(email => email.trim());
-    console.log('Emails Array:', emailsArray);
-    try {
-      console.log('Sending invitations...');
-      setLoading(true);
-      await axios.post(`${API_BASE_URL}/invite`, { groupId: selectedGroup._id, emails: emailsArray });
-      console.log('Invitations sent successfully!');
-      setLoading(false);
-      setOpenInviteDialog(false);
-      alert('Invitations sent successfully!');
-    } catch (error) {
-      setLoading(false);
-      setError('Error sending invitations');
-    }
-  };
   
+    // Determine if the current user is an admin for the selected group
+    const isAdmin = (group) => {
+      return group.admin._id === userGroups.userId;
+    };
+    
+    const handleInvite = async () => {
+      console.log('Inviting members:', emailsToInvite);
+      setOpenInviteDialog(true);
+    
+      if (!selectedGroup || !selectedGroup._id) {
+        console.error("No selected group or missing group ID:", selectedGroup);
+        return;
+      }
+    
+      const emailsArray = emailsToInvite.split(',').map(email => email.trim());
+      console.log('Emails Array:', emailsArray);
+    
+      try {
+        console.log('Sending invitations...');
+        setLoading(true);
+    
+        // Make sure the request is correct
+        const response = await axios.post(`${API_BASE_URL}/invite`, {
+          groupId: selectedGroup._id,
+          emails: emailsArray,
+          userId: userId,
+        });
+    
+        console.log('Invitations sent successfully!', response.data);
+        
+        setLoading(false);
+        setOpenInviteDialog(false);
+        alert('Invitations sent successfully!');
+      } catch (error) {
+        setLoading(false);
+        console.error('Error sending invitations:', error);
+        setError('Error sending invitations');
+      }
+    };
+    
 
   // Handle form input change
   const handleInputChange = (e) => {
@@ -112,7 +143,6 @@ const CotisationList = () => {
       alert('Error creating group');
     }
   };
-  
 
   // Handle joining a group
   const handleJoin = () => {
@@ -133,7 +163,7 @@ const CotisationList = () => {
           Create Cotisation Group
         </Button>
       </Box>
-      {selectedGroup ? (
+      {/* {selectedGroup ? (
         <Card sx={{ p: 3 }}>
           <Typography variant="h5">{selectedGroup.name}</Typography>
           <Typography variant="body1">Description: {selectedGroup.description}</Typography>
@@ -145,7 +175,9 @@ const CotisationList = () => {
           <ul>
             {selectedGroup.members?.length > 0 ? (
               selectedGroup.members.map((member, index) => (
-                <li key={index}>User {member.userId} - {member.status}</li>
+                <li key={index}>
+                  {member.userId?.name} ({member.userId?.email}) - {member.status}
+                </li>
               ))
             ) : (
               <Typography variant="body2">No members yet</Typography>
@@ -168,9 +200,102 @@ const CotisationList = () => {
                   <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
                   <Typography variant="body2">Frequency: {group.frequency}</Typography>
                   <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
-                  <Button variant="outlined" sx={{ mt: 1, mr: 1 }} onClick={handleInvite}>
+                  <Button
+                      variant="outlined"
+                      sx={{ mt: 1, mr: 1 }}
+                      onClick={() => {
+                        handleSelectGroup(group._id);  // First, select the group
+                        setTimeout(handleInvite, 100); // Then, execute handleInvite after a short delay
+                      }}
+                    >
+                      Invite
+                    </Button>
+
+                  <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id)}>
+                    View
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )} */}
+      {selectedGroup ? (
+        <Card sx={{ p: 3 }}>
+          <Typography variant="h5">{selectedGroup.name}</Typography>
+          <Typography variant="body1">Description: {selectedGroup.description}</Typography>
+          <Typography variant="body1">
+            Admin: {selectedGroup.admin?.name} ({selectedGroup.admin?.email})
+          </Typography>
+          <Typography variant="body1">Frequency: {selectedGroup.frequency}</Typography>
+          <Typography variant="body1">Contribution Amount: ${selectedGroup.contributionAmount}</Typography>
+          <Typography variant="body1">Total Collected: ${selectedGroup.totalCollected}</Typography>
+          
+          {/* Display members of the group */}
+          <Typography variant="body2">Members:</Typography>
+          <ul>
+            {selectedGroup.members?.length > 0 ? (
+              selectedGroup.members.map((member, index) => (
+                <li key={index}>
+                  {member.userId?.name} ({member.userId?.email}) - {member.status}
+                </li>
+              ))
+            ) : (
+              <Typography variant="body2">No members yet</Typography>
+            )}
+          </ul>
+
+          {/* Additional content based on user role */}
+          {isAdmin(selectedGroup) ? (
+            <Typography variant="body2" color="primary">
+              Admin Actions: You can manage the group settings here.
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              You are a Member of this group.
+            </Typography>
+          )}
+
+          <Button variant="outlined" sx={{ mr: 2 }} onClick={() => setSelectedGroup(null)}>
+            Close
+          </Button>
+          <Button variant="contained" color="primary" onClick={() => setOpenJoinDialog(true)}>
+            Join
+          </Button>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {(userGroups.groups?.length > 0 ? userGroups.groups : []).map((group) => (
+            <Grid item xs={12} sm={6} md={4} key={group._id}>
+              <Card sx={{ p: 2 }}>
+                <CardContent>
+                  <Typography variant="h6">{group.name}</Typography>
+                  <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
+                  <Typography variant="body2">Frequency: {group.frequency}</Typography>
+                  <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
+
+                  {/* Display the role of the user */}
+                  {isAdmin(group) ? (
+                    <Typography variant="body2" color="primary">
+                      You are an Admin
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">
+                      You are a Member
+                    </Typography>
+                  )}
+
+                  <Button
+                    variant="outlined"
+                    sx={{ mt: 1, mr: 1 }}
+                    onClick={() => {
+                      handleSelectGroup(group._id); // Select the group
+                      setTimeout(() => handleInvite(group._id), 100); // Execute handleInvite after short delay
+                    }}
+                  >
                     Invite
                   </Button>
+
                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id)}>
                     View
                   </Button>
