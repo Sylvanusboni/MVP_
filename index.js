@@ -24,5 +24,9 @@ app.use('/api/campaign', require('./routes/campaign.route'));
 
 app.use('/api/transaction', require('./routes/transaction.route'));
 
+app.use('/api/contribution', require('./routes/contribution.route'));
+
+app.use('/api/invitation', require('./routes/invitation.route'));
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
