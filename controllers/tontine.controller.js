@@ -4,6 +4,7 @@ const TontinePayment = require('../models/Tontine/payment.model');
 const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
+const GOOGLE_PASS = process.env.GOOGLE_PASS;
 const nodemailer = require('nodemailer')
 
 const sendEmail = async (destinataire, sujet, message) => {
@@ -137,6 +138,10 @@ const TontineController = ({
                 return res.status(400).json({ message: 'Tontine already started or completed'});
             }
 
+            if (tontine.admin.toString() !== req.query.userId) {
+                return res.status(403).json({ message: 'Only admin can start tontine'});
+            }
+
             const startDate = new Date(tontine.startDate);
             const cycleDuration = tontine.cycleDuration;
             const members = tontine.members;
@@ -257,7 +262,7 @@ const TontineController = ({
                 return res.status(404).json('Set Ids');
             }
             if (req.query.tontineId) {
-                const tontine = await TontineController.findById(res.query.tontineId);
+                const tontine = await TontineController.findById(req.query.tontineId);
                 if (!tontine) {
                     return res.status(404).json('Undefined Tontine');
                 }

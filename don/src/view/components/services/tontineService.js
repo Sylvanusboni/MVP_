@@ -25,8 +25,10 @@ export const inviteMembers = async (tontineId, members) => {
 
 // Get the current cycle
 export const getCycle = async (tontineId) => {
-  return axios.get(`${API_BASE_URL}/cycle`, { params: { tontineId } });
+  console.log("Fetching cycle for tontineId:", tontineId); // Debug log
+  return axios.get(`${API_BASE_URL}/cycle/`, { params: { tontineId } });
 };
+
 
 // Update a cycle
 export const updateCycle = async (tontineId, updates) => {
@@ -40,7 +42,7 @@ export const getMembers = async (tontineId) => {
 
 // Pay into the Tontine
 export const payTontine = async (tontineId, amount) => {
-  return axios.post(`${API_BASE_URL}/pay`, { tontineId, amount });
+  return axios.post(`${API_BASE_URL}/pay/?userId=${user}`, { tontineId, amount });
 };
 
 // Collect Tontine funds

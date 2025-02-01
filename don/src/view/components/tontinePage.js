@@ -1,158 +1,8 @@
-// import React, { useState } from 'react';
-
-// import {
-//   Box,
-//   Button,
-//   Dialog,
-//   DialogActions,
-//   DialogContent,
-//   DialogTitle,
-//   Typography,
-//   Grid,
-//   Card,
-//   CardContent,
-//   Container,
-//   CircularProgress
-// } from '@mui/material';
-
-// // Mock Data
-// const mockTontines = [
-//   { id: 1, name: "Tontine Alpha", members: 12, contributionAmount: 100, cycleDuration: 30, status: "active" },
-//   { id: 2, name: "Tontine Beta", members: 20, contributionAmount: 150, cycleDuration: 45, status: "pending" },
-//   { id: 3, name: "Tontine Gamma", members: 10, contributionAmount: 200, cycleDuration: 60, status: "completed" },
-// ];
-
-// const mockTontineDetails = {
-//   1: { id: 1, name: "Tontine Alpha", members: ["Alice", "Bob", "Charlie"], totalMembers: 12, contributionAmount: 100, cycleDuration: 30, status: "active" },
-//   2: { id: 2, name: "Tontine Beta", members: ["David", "Eva"], totalMembers: 20, contributionAmount: 150, cycleDuration: 45, status: "pending" },
-//   3: { id: 3, name: "Tontine Gamma", members: ["Fay", "George"], totalMembers: 10, contributionAmount: 200, cycleDuration: 60, status: "completed" },
-// };
-
-// const TontineList = () => {
-//   const [selectedTontine, setSelectedTontine] = useState(null);
-//   const [openJoinDialog, setOpenJoinDialog] = useState(false);
-//   const [loading, setLoading] = useState(false);
-//   const [open, setOpen] = useState(false);
-
-//   const handleSelectTontine = (tontineId) => {
-//     setSelectedTontine(mockTontineDetails[tontineId]);
-//   };
-
-//   const handleJoin = () => {
-//     setLoading(true);
-//     setTimeout(() => {
-//       setLoading(false);
-//       setOpenJoinDialog(false);
-//       setSelectedTontine(null);
-//       alert("You have successfully joined the tontine!");
-//     }, 2000);
-//   };
-
-//   return (
-//     <Container>
-//       <Box sx={{ display: "flex", justifyContent: "space-between", my: 3 }}>
-//         <Typography variant="h4">Tontines</Typography>
-//         <Button variant="contained" color="primary" onClick={() => setOpen(true)}>
-//           Create Tontine
-//         </Button>
-//       </Box>
-//       {selectedTontine ? (
-//         <Card sx={{ p: 3 }}>
-//           <Typography variant="h5">{selectedTontine.name}</Typography>
-//           <Typography variant="body1">Members: {selectedTontine.totalMembers}</Typography>
-//           <Typography variant="body1">Contribution Amount: ${selectedTontine.contributionAmount}</Typography>
-//           <Typography variant="body1">Cycle Duration: {selectedTontine.cycleDuration} days</Typography>
-//           <Typography variant="body1">Status: {selectedTontine.status}</Typography>
-//           <ul>
-//             {selectedTontine.members.map((member, index) => (
-//               <li key={index}>{member}</li>
-//             ))}
-//           </ul>
-//           <Button variant="outlined" sx={{ mr: 2 }} onClick={() => setSelectedTontine(null)}>
-//             Close
-//           </Button>
-//           <Button variant="contained" color="primary" onClick={() => setOpenJoinDialog(true)}>
-//             Join
-//           </Button>
-//         </Card>
-//       ) : (
-//         <Grid container spacing={3}>
-//           {mockTontines.map((tontine) => (
-//             <Grid item xs={12} sm={6} md={4} key={tontine.id}>
-//               <Card sx={{ p: 2 }}>
-//                 <CardContent>
-//                   <Typography variant="h6">{tontine.name}</Typography>
-//                   <Typography variant="body2">Members: {tontine.members}</Typography>
-//                   <Typography variant="body2">Contribution: ${tontine.contributionAmount}</Typography>
-//                   <Typography variant="body2">Cycle: {tontine.cycleDuration} days</Typography>
-//                   <Typography variant="body2">Status: {tontine.status}</Typography>
-//                   <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectTontine(tontine.id)}>
-//                     View
-//                   </Button>
-//                 </CardContent>
-//               </Card>
-//             </Grid>
-//           ))}
-//         </Grid>
-//       )}
-
-//       {/* Join Tontine Dialog */}
-//       <Dialog open={openJoinDialog} onClose={() => setOpenJoinDialog(false)}>
-//         <DialogTitle>Join {selectedTontine?.name}?</DialogTitle>
-//         <DialogContent>
-//           <Typography>Are you sure you want to join this tontine?</Typography>
-//         </DialogContent>
-//         <DialogActions>
-//           <Button onClick={() => setOpenJoinDialog(false)}>Cancel</Button>
-//           <Button onClick={handleJoin} variant="contained" color="primary">
-//             {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm"}
-//           </Button>
-//         </DialogActions>
-//       </Dialog>
-
-//       {/* Create Tontine Dialog */}
-//       <Dialog open={open} onClose={() => setOpen(false)}>
-//         <DialogTitle>Create a New Tontine</DialogTitle>
-//         <DialogContent>
-//           <Typography>Create tontine functionality coming soon!</Typography>
-//         </DialogContent>
-//         <DialogActions>
-//           <Button onClick={() => setOpen(false)}>Close</Button>
-//         </DialogActions>
-//       </Dialog>
-//     </Container>
-//   );
-// };
-
-// export { TontineList };
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import {
-  Container,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  CircularProgress,
+import {  Container, Typography, Button, Card, CardContent, Grid, Dialog, DialogActions, DialogContent, DialogTitle, TextField, CircularProgress,
 } from "@mui/material";
-import {
-  getUserTontine,
-  createTontine,
-  startTontine,
-  inviteMembers,
-  getCycle,
-  updateCycle,
-  getMembers,
-  payTontine,
-  collectTontine,
-} from "./services/tontineService";
+import { getUserTontine, createTontine, startTontine, collectTontine, getCycle} from "./services/tontineService";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { IconButton } from "@mui/material";
 
@@ -163,6 +13,7 @@ export default function TontinePage() {
   const [admins, setAdmins] = useState([]);
   const [selectedTontine, setSelectedTontine] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
    const [openInviteDialog, setOpenInviteDialog] = useState(false);
@@ -184,12 +35,33 @@ export default function TontinePage() {
     try {
       const data = await getUserTontine();
       console.log('data',data);
-      setTontines(data.groups || []);
+      setTontines(data.tontines  || []);
       setAdmins(data.admins || []);
     } catch (error) {
       console.error("Error loading Tontines:", error);
     }
   };
+
+  const handlePayTontine = async () => {
+    try {
+      const response = await getCycle(selectedTontine._id);
+      const cycleId = response.data.cycleId;
+      
+      if (!cycleId) {
+        throw new Error('Cycle ID not found');
+      }
+      
+      const paymentResponse = await axios.post(`${API_BASE_URL}/pay-tontine`, {
+        cycleId: cycleId,
+        amount: contributionAmount,
+      });
+      
+      console.log('Payment successful:', paymentResponse.data);
+    } catch (error) {
+      console.error('Error processing payment:', error);
+    }
+  };
+
 
   const handleCreateTontine = async () => {
     try {
@@ -210,24 +82,9 @@ export default function TontinePage() {
     }
   };
 
-  // const handleInviteMembers = async () => {
-  //   try {
-  //     await inviteMembers(selectedTontine._id, members);
-  //     setMembers([]);
-  //     loadTontines();
-  //   } catch (error) {
-  //     console.error("Error inviting members:", error);
-  //   }
-  // };
-
   const handleInvite = async () => {
     console.log('Inviting members:', emailsToInvite);
     setOpenInviteDialog(true);
-  
-    // if (!selectedTontine || !selectedTontine._id) {
-    //   console.error("No selected group or missing group ID:", selectedTontine);
-    //   return;
-    // }
   
     const emailsArray = emailsToInvite.split(',').map(email => email.trim());
     console.log('Emails Array:', emailsArray);
@@ -255,15 +112,6 @@ export default function TontinePage() {
     }
   };
 
-  const handlePayTontine = async () => {
-    try {
-      await payTontine(selectedTontine._id, contributionAmount);
-      setContributionAmount("");
-      loadTontines();
-    } catch (error) {
-      console.error("Error paying into Tontine:", error);
-    }
-  };
 
   const handleCollectTontine = async (tontineId) => {
     try {
@@ -335,9 +183,16 @@ export default function TontinePage() {
                     Start
                   </Button>
                 ) : (
-                  <Button variant="contained" onClick={() => payTontine(tontine._id)} sx={{ ml: 1, mt: 1 }}>
-                    Pay Contribution
-                  </Button>
+                  <Button 
+                  variant="contained" 
+                  onClick={() => { 
+                    setSelectedTontine(tontine);
+                    setOpenPaymentDialog(true);
+                  }} 
+                  sx={{ mt: 1 }}
+                >
+                  Pay Contribution
+                </Button>
                 )}
 
                 {admins.length > 0 && (
@@ -396,25 +251,45 @@ export default function TontinePage() {
         </DialogActions>
       </Dialog>
       {/* Invite Members Dialog */}
-            <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
-              <DialogTitle>Invite Members</DialogTitle>
-              <DialogContent>
-                <TextField
-                  fullWidth
-                  label="Enter Emails (comma separated)"
-                  value={emailsToInvite}
-                  onChange={(e) => setEmailsToInvite(e.target.value)}
-                  // error={Boolean(error)}
-                  helperText={error || "Enter emails separated by commas"}
-                />
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpenInviteDialog(false)}>Close</Button>
-                <Button onClick={handleInvite} variant="contained" color="primary" disabled={loading}>
-                  {loading ? <CircularProgress size={24} color="inherit" /> : "Send Invitations"}
-                </Button>
-              </DialogActions>
-            </Dialog>
+          <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
+            <DialogTitle>Invite Members</DialogTitle>
+            <DialogContent>
+              <TextField
+                fullWidth
+                label="Enter Emails (comma separated)"
+                value={emailsToInvite}
+                onChange={(e) => setEmailsToInvite(e.target.value)}
+                // error={Boolean(error)}
+                helperText={error || "Enter emails separated by commas"}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenInviteDialog(false)}>Close</Button>
+              <Button onClick={handleInvite} variant="contained" color="primary" disabled={loading}>
+                {loading ? <CircularProgress size={24} color="inherit" /> : "Send Invitations"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+           {/* Payment Dialog */}
+      <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
+        <DialogTitle>Pay Contribution</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Contribution Amount"
+            type="number"
+            value={contributionAmount}
+            onChange={(e) => setContributionAmount(e.target.value)}
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPaymentDialog(false)}>Cancel</Button>
+          <Button onClick={handlePayTontine} variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm Payment"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
