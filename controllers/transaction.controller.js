@@ -39,7 +39,8 @@ async function generateToken() {
 const transactionController = ({
     complete: async(req, res) => {
         try {
-            const {transactionReference, amount, email, userId} = req.body;
+            const {transactionReference, email, userId} = req.body;
+            const amount = parseInt(req.body.amount);
 
             if (!transactionReference || !amount) {
                 return res.status(404).json('Need Trans Reference and Amount to confirm');
@@ -96,15 +97,36 @@ const transactionController = ({
                     await campaign.save();
                 }
                 if (transaction.tontineId && transaction.tontineCycle) {
-
+                    const tontine = await TontineGroup.findById(transaction.tontineId);
+                    if (!tontine)
+                        return res.status(404).json('Unknown Tontine');
+                    const cycle = await TontineCycle.findById(transaction.tontineCycle);
+                    if (!cycle)
+                        return res.status(404).json('Unexisting Cycle');
+                    const _member = cycle.members.find(it => it.userId.toString() === userId);
+                    if (!_member)
+                        return res.status(404).json('Member not registered in this Tontine');
+                    _member.payed += amount;
+                    cycle.collectedAmount += amount;
+                    tontine.rest -= amount;
+                    await tontine.save();
+                    await cycle.save();
+                    await transaction.save();
                 }
                 if (transaction.contribution) {
-
+                    const contribution = await ContributionGroup.findById(transaction.contribution);
+                    if (!contribution) {
+                        return res.status(404).json('Contribution Group not found')
+                    }
+                    const _member = contribution.members.find(it => it.userId.toString() === userId);
+                    if (!_member)
+                        return res.status(404).json('Member not found');
+                    _member.collectedAmount += amount;
+                    await contribution.save();
                 }
+                transaction.status = 'completed';
             }
-
             return res.status(200).json("Good");
-
         } catch (error) {
             console.log(error);
             return res.status(404).json(error);
@@ -112,7 +134,13 @@ const transactionController = ({
     },
     getUserTransaction: async(req, res) => {
         try {
+            const userId = req.query.userId;
+            const page = req.query.page || 1;
+            const limit = req.query.limit || 15;
 
+            const transactions = await Transaction.find({user: userId}).skip((page - 1) * limit).limit(limit).sort({_id: -1});
+            return res.status(200).json(transactions);
+            
         } catch (error) {
             return res.status(404).json(error);
         }

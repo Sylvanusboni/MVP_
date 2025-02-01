@@ -7,6 +7,8 @@ const ContributionGroupSchema = new mongoose.Schema({
     members: [{
             userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User'},
             status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending'},
+            payed: {type: Number, default: 0},
+            rest: {type: Number, default: 0}
         },
     ],
     frequency: {type: String, enum: ['daily', 'weekly', 'monthly', 'yearly'], required: true},

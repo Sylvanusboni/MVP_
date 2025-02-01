@@ -2,6 +2,16 @@ const axios = require('axios');
 const baseURL = process.env.INTERSWITCH_BASE_URL;
 const clientId = process.env.INTERSWITCH_CLIENT_ID;
 const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+const crypto = require("crypto");
+
+function calculateMac(initiatingAmount,
+    initiatingCurrencyCode, initiatingPaymentMethodCode,
+    terminatingAmount, terminatingCurrencyCode,
+    terminatingPaymentMethodCode, terminatingCountryCode) {
+
+  const data = `${initiatingAmount}${initiatingCurrencyCode}${initiatingPaymentMethodCode}${terminatingAmount}${terminatingCurrencyCode}${terminatingPaymentMethodCode}${terminatingCountryCode}`;
+  return crypto.createHash("sha512").update(data).digest("hex");
+};
 
 function getAuthHeader(clientId, secretKey) {
     return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
@@ -12,6 +22,7 @@ function generateTransferCode() {
     const randomPart = Math.floor(Math.random() * 1000000); 
     return `${timestamp}${randomPart}`;
 }
+
 
 async function fundTransfer(transferDetails) {
     const token = await generateToken();
@@ -157,59 +168,93 @@ const interswitchController = ({
             return res.status(404).json('Callback Error');
         }
     },
-    validate: async(req, res) => {
-        const token = await generateToken();
-
-        const headers = {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        };
-
+    validatCard: async(req, res) => {
         try {
-            const response = await axios.get(
-                `https://sandbox.interswitchng.com/payments/api/v1/transactions/${req.body.transactionRef}`,
-                {headers}
-            );
+            const data = await generateToken();
+            const {accountNumber, bankCode} = req.body;
 
-            console.log('Transaction status:', response.data);
+            const accessToken = data.access_token;
+ 
+            const response = await axios.get(
+            `https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/DoAccountNameInquiry`, //?accountNumber=${accountNumber}&bankCode=${bankCode}
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    TerminalId: '3PBL0001',
+                    bankCode: bankCode,
+                    accountId: accountNumber,
+                    'Content-Type': 'application/json'
+                },
+            });
             return res.status(200).json(response.data);
         } catch (error) {
-            console.error('Error validating transaction:', error);
-            return res.status(404).json(error);
+          console.log("Erreur lors de la validation du compte :", error);
+          return res.status(404).json(error);
+        }
+    },
+    transfertFunds: async(req, res) => {
+        try {
+            
+            const payload = {
+                transferCode: "030009998999",
+                mac: "9f4e4f53c57be63e1f08d8f07a7bc1a9461e4a7d5304043daa1ef54bd727b6cde148f4fbfc5e2ad8c4a60f78dfa76304de671fbeb70657b1628f14b6b6baa5e1",
+                termination: {
+                    amount: transferDetails.amount,
+                    accountReceivable: {
+                        accountNumber: transferDetails.accountNumber,
+                        accountType: "00",
+                    },
+                    entityCode: transferDetails.bankCode,
+                    currencyCode: "566",
+                    paymentMethodCode: "AC",
+                    countryCode: "NG",
+                },
+                sender: {
+                    phone: transferDetails.senderPhone,
+                    email: transferDetails.senderEmail,
+                    lastname: transferDetails.senderLastName,
+                    othernames: transferDetails.senderOtherNames,
+                },
+                initiatingEntityCode: "PBL",
+                initiation: {
+                    amount: transferDetails.amount,
+                    currencyCode: "566",
+                    paymentMethodCode: "CA",
+                    channel: "7",
+                },
+                beneficiary: {
+                    lastname: transferDetails.beneficiaryLastName || "",
+                    othernames: transferDetails.beneficiaryOtherNames || "",
+                },
+            };
+
+        } catch (err) {
+            console.log('Error while transfering funds', err);
+            return res.status(404).json(err);
         }
     }
 })
 
-const crypto = require("crypto");
-
-function calculateMac(initiatingAmount,
-    initiatingCurrencyCode, initiatingPaymentMethodCode,
-    terminatingAmount, terminatingCurrencyCode,
-    terminatingPaymentMethodCode, terminatingCountryCode) {
-
-  const data = `${initiatingAmount}${initiatingCurrencyCode}${initiatingPaymentMethodCode}${terminatingAmount}${terminatingCurrencyCode}${terminatingPaymentMethodCode}${terminatingCountryCode}`;
-  return crypto.createHash("sha512").update(data).digest("hex");
-};
-
 const validateAccount = async (accessToken, accountNumber, bankCode) => {
     try {
-      const response = await axios.get(
+        const {accessToken, accountNumber, bankCode} = req.body;
+        
+        const response = await axios.get(
         `https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/DoAccountNameInquiry?accountNumber=${accountNumber}&bankCode=${bankCode}`,
         {
-          headers: {
+            headers: {
             Authorization: `Bearer ${accessToken}`,
             terminalId: '3PBL0001',
             bankCode: bankCode,
             accountId: accountNumber
-          },
-        }
-      );
-      return response.data;
+            },
+        });
+        return response.data;
     } catch (error) {
       console.error("Erreur lors de la validation du compte :", error.response.data);
       return null;
     }
-  };
+};
 
 async function generateToken() {
     const clientId = process.env.INTERSWITCH_CLIENT_ID;
