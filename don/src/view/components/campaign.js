@@ -29,7 +29,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 const API_BASE_URL = "http://localhost:8080/api/campaign";
 
-
 const ExpandMore = styled((props) => {
   const { expand, ...other } = props;
   return <IconButton {...other} />;
@@ -291,7 +290,6 @@ export default function CampaignPage() {
 
   const user = localStorage.getItem("userId");
 
-
   const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     try {
@@ -369,7 +367,6 @@ export default function CampaignPage() {
             ))}
           </Grid>
         )}
-
 
       {/* Create Campaign Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)}>

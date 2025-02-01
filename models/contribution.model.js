@@ -26,4 +26,4 @@ const ContributionGroupSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Contribution', ContributionSchema);
+//module.exports = mongoose.model('Contribution', ContributionSchema);

@@ -8,6 +8,8 @@ router.patch('/', Contribution.update);
 
 router.get('/user', Contribution.getUserGroups);
 
+router.get('/members', Contribution.getMembers);
+
 router.post('/invite', Contribution.inviteMembers);
 
 router.post('/pay', Contribution.payContibution);

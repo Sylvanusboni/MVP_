@@ -1,22 +1,24 @@
 const Invitation = require('../models/invitation.model');
 const ContributionGroup = require('../models/Contribution/group.model');
 const TontineGroup = require('../models/Tontine/group.model');
-const User = require('../models/invitation.model');
+const User = require('../models/user.model');
 
 const invitationController = ({
     get: async(req, res) => {
         try {
-            const {userId} = req.query.userId;
+            const userId = req.query.userId;
 
             const user = await User.findById(userId);
+            console.log(user,userId);
             if (!user) {
                 return res.status(404).json('Unknown User');
             }
 
             const invitations = await Invitation.find({
-                user: user._id
-            }).populate('invitedTo', ('name')).populate('invitedBy', 'name email');
-            return res.status(404).json(invitations);
+                user: user._id,
+                status: 'pending',
+            }).populate('invitedBy', 'name email').populate('groupId', 'name description');
+            return res.status(200).json(invitations);
         } catch (error) {
             return res.status(404).json(error);
         }
@@ -81,9 +83,9 @@ const invitationController = ({
                 return res.status(404).json('Undefined Invitation');
             }
             const now = Date.now;
-            if (invitation.expiryDate > now) {
-                return res.status(204).json('Invitation Expired');
-            }
+            // if (invitation.expiryDate > now) {
+            //     return res.status(204).json('Invitation Expired');
+            // }
             const _status = ['pending', 'accepted', 'declined'];
             if (!_status.includes(status)) {
                 return res.status(404).json('Unknown status');
@@ -100,9 +102,13 @@ const invitationController = ({
                     return res.status(404).json('Never send invitaiton');
                 }
                 member.status = status;
+                if (status === 'declined') {
+                    group.members = group.members.filter(it => it.userId.toString() !== invitation.user.toString());
+                }
                 await group.save();
             }
             await invitation.save();
+            res.status(200).json('Invitation Responded');
         } catch (error) {
             return res.status(404).json(error);
         }
