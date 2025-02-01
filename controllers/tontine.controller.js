@@ -67,7 +67,7 @@ const TontineController = ({
         try {
             const {name, contributionAmount, cycleDuration, members, startDate} = req.body;
 
-            if (!name || !contributionAmount || !cycleDuration || !members || !startDate || contributionAmount === 0) {
+            if (!name || !contributionAmount || !cycleDuration || !startDate || contributionAmount === 0) {
                 return res.status(400).json({message: 'All fields are required'});
             }
 
