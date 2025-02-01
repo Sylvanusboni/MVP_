@@ -4,6 +4,30 @@ const TontinePayment = require('../models/Tontine/payment.model');
 const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
+const nodemailer = require('nodemailer')
+
+const sendEmail = async (destinataire, sujet, message) => {
+    try {
+        let transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'sylvanusboni21@gmail.com',
+                pass: GOOGLE_PASS
+            }
+        });
+
+        let mailOptions = {
+            from: 'sylvanusboni21@gmail.com',
+            to: destinataire,
+            subject: sujet,
+            text: message
+        };
+        let info = await transporter.sendMail(mailOptions);
+        console.log('Email envoyé: ' + info.response);
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi de l\'email: ', error);
+    }
+};
 
 async function sendInvitation(groupType, sender, groupId, dest)
 {
@@ -50,15 +74,21 @@ const TontineController = ({
         try {
             const userId = req.query.userId;
 
+            console.log("Inside User Id: ", userId);
             const user = await User.findById(userId);
             if (!user) {
                 return res.status(404).json('Unknown User');
             }
 
+            console.log("User: ", user);
+
             const tontines = await TontineGroup.find({members: {$elemMatch: {userId: user._id}}}).populate('members.userId', 'name email').populate('admin', 'name email');
             const admins = await TontineGroup.find({admin: user._id}).populate('members.userId', 'name email').populate('admin', 'name email');
 
-            return res.status(200).json(tontines);
+            return res.status(200).json({
+                tontines: tontines,
+                admins: admins
+            });
         } catch (error) {
             return res.status(404).json(error);
         }
@@ -98,6 +128,7 @@ const TontineController = ({
     start: async(req, res) => {
         try {
             const {tontineId} = req.params;
+            console.log(tontineId);
 
             const tontine = await TontineGroup.findById(tontineId);
             if (!tontine) return res.status(404).json({ message: 'Tontine not found'});
@@ -132,12 +163,12 @@ const TontineController = ({
                 await cycle.save();
             }
 
-            tontine.status = 'active';
+            tontine.status = 'started';
             await tontine.save();
 
             res.status(200).json({ message: 'Tontine started successfully' });
         } catch (error) {
-            res.status(500).json({ message: 'Server Error', error: error.message });
+            res.status(404).json({ message: 'Server Error', error: error.message });
         }
     },
     payCycleContribution: async(req, res) => {

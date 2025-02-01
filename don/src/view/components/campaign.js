@@ -1,22 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import {
-  Container,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions,
-  CircularProgress,
-  Box,
-  Tabs,
-  Tab,
+import { Container, Grid, Card, CardContent, CardMedia, Typography, Button,
+  Dialog, DialogTitle, DialogContent, TextField, DialogActions, CircularProgress, Box, Tabs,Tab,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import {CardHeader, CardActions, Collapse, Avatar, IconButton} from "@mui/material";
@@ -141,13 +126,16 @@ const handleDonate = async () => {
   };
 
   // Function to format large numbers
-const formatNumber = (num) => {
-  if (num >= 1e12) return `₦${(num / 1e12).toFixed(2)}T`; // Trillions
-  if (num >= 1e9) return `₦${(num / 1e9).toFixed(2)}B`;  // Billions
-  if (num >= 1e6) return `₦${(num / 1e6).toFixed(2)}M`;  // Millions
-  if (num >= 1e3) return `₦${(num / 1e3).toFixed(2)}K`;  // Thousands
-  return `₦${num.toLocaleString()}`; // Default formatted number
-};
+  const formatNumber = (num) => {
+    if (num == null) return "₦0"; // Handle null/undefined values
+    
+    if (num >= 1e12) return `₦${(num / 1e12).toFixed(2)}T`; // Trillions
+    if (num >= 1e9) return `₦${(num / 1e9).toFixed(2)}B`;  // Billions
+    if (num >= 1e6) return `₦${(num / 1e6).toFixed(2)}M`;  // Millions
+    if (num >= 1e3) return `₦${(num / 1e3).toFixed(2)}K`;  // Thousands
+  
+    return `₦${num.toLocaleString()}`; // Default formatted number
+  };  
   
   return (
     <Card sx={{ maxWidth: 345 }}>

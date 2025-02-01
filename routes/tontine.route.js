@@ -6,7 +6,7 @@ router.get('/user', Tontine.getUserTontine);
 
 router.post('/create', Tontine.create);
 
-router.post('/start', Tontine.start);
+router.post('/start/:tontineId', Tontine.start);
 
 router.post('/invite', Tontine.inviteMembers);
 
