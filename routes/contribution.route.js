@@ -1,4 +1,5 @@
 const Contribution = require('../controllers/contribution.controller');
+const Interswitch = require('../controllers/interswitch');
 const express = require('express');
 const router = express.Router();
 
@@ -14,6 +15,6 @@ router.post('/invite', Contribution.inviteMembers);
 
 router.post('/pay', Contribution.payContibution);
 
-router.post('/collect', Contribution.collect);
+router.post('/collect', Interswitch.collectContribution);
 
 module.exports = router;

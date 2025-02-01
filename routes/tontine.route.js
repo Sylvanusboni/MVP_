@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Tontine = require('../controllers/tontine.controller');
+const interswitch = require('../controllers/interswitch')
 
 router.get('/user', Tontine.getUserTontine);
 
@@ -18,6 +19,6 @@ router.get('/member', Tontine.getMembers);
 
 router.post('/pay', Tontine.payTontine);
 
-router.post('/collect', Tontine.collectTontine);
+router.post('/collect', interswitch.collectTontine);
 
 module.exports = router;

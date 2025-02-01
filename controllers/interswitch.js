@@ -1,7 +1,13 @@
 const axios = require('axios');
+const TontineCycle = require('../models/Tontine/cycle.model');
+const TontineGroup = require('../models/Tontine/group.model');
+const ContributionGroup = require('../models/Contribution/group.model');
+const Transaction = require('../models/transaction.model');
+
 const baseURL = process.env.INTERSWITCH_BASE_URL;
 const clientId = process.env.INTERSWITCH_CLIENT_ID;
 const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+const User = require('../models/user.model');
 const crypto = require("crypto");
 
 function calculateMac(initiatingAmount,
@@ -10,7 +16,9 @@ function calculateMac(initiatingAmount,
     terminatingPaymentMethodCode, terminatingCountryCode) {
 
   const data = `${initiatingAmount}${initiatingCurrencyCode}${initiatingPaymentMethodCode}${terminatingAmount}${terminatingCurrencyCode}${terminatingPaymentMethodCode}${terminatingCountryCode}`;
-  return crypto.createHash("sha512").update(data).digest("hex");
+  const mac = crypto.createHash("sha512").update(data).digest("hex");
+  console.log(`mac: ${mac}`);
+  return mac.toString();
 };
 
 function getAuthHeader(clientId, secretKey) {
@@ -194,10 +202,21 @@ const interswitchController = ({
     },
     transfertFunds: async(req, res) => {
         try {
-            
+            //transfertDetails: {
+            //    accountNumber,
+            //    amount,
+            //    bankCode,
+            //    
+            //}
+
+            const data = await generateToken(process.env.INTERSWITCH_TRANSFER_CLIENT_ID,
+                                             process.env.INTERSWITCH_TRANSFER_SECRET_KEY);
+
+            const transferDetails = req.body;
+
             const payload = {
-                transferCode: "030009998999",
-                mac: "9f4e4f53c57be63e1f08d8f07a7bc1a9461e4a7d5304043daa1ef54bd727b6cde148f4fbfc5e2ad8c4a60f78dfa76304de671fbeb70657b1628f14b6b6baa5e1",
+                transferCode: generateTransferCode(),
+                mac: calculateMac(transferDetails.amount.toString(), "566", "CA",  transferDetails.amount.toString(), "566", "AC", "NG"),
                 termination: {
                     amount: transferDetails.amount,
                     accountReceivable: {
@@ -210,10 +229,10 @@ const interswitchController = ({
                     countryCode: "NG",
                 },
                 sender: {
-                    phone: transferDetails.senderPhone,
-                    email: transferDetails.senderEmail,
-                    lastname: transferDetails.senderLastName,
-                    othernames: transferDetails.senderOtherNames,
+                    phone: transferDetails.senderPhone || "08124888436",
+                    email: transferDetails.senderEmail || "dadubiaro@interswitch.com",
+                    lastname: transferDetails.senderLastName || "Adubiaro",
+                    othernames: transferDetails.senderOtherNames || "Deborah",
                 },
                 initiatingEntityCode: "PBL",
                 initiation: {
@@ -223,14 +242,140 @@ const interswitchController = ({
                     channel: "7",
                 },
                 beneficiary: {
-                    lastname: transferDetails.beneficiaryLastName || "",
-                    othernames: transferDetails.beneficiaryOtherNames || "",
+                    lastname: transferDetails.beneficiaryLastName || "ralph",
+                    othernames: transferDetails.beneficiaryOtherNames || "apho",
                 },
             };
 
+        const response = await axios.post(
+            "https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/TransferFunds",
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${data.access_token}`,
+                    "Content-Type": "application/json",
+                    accept: "application/json",
+                    terminalId: "3PBL",
+                },
+            }
+        );
+
+        console.log(response.data);
+        return res.status(200).json(response.data);
         } catch (err) {
             console.log('Error while transfering funds', err);
             return res.status(404).json(err);
+        }
+    },
+    collectContribution: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+            const groupId = req.body.groupId;
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const {accountNumber, bankCode, amount} = req.body;
+            if (!accountNumber || !bankCode || !amount)
+                return res.status(404).json('Need this informations');
+
+            const contribution = await ContributionGroup.findById(groupId).populate('admin');
+            if (!contribution) {
+                return res.status(404).json('Unknown Contribution');
+            }
+
+            if (contribution.admin.toString() !== user._id.toString()) {
+                return res.status(403).json('Unauthorized! Only Admin can collect');
+            }
+
+            if (amount > contribution.totalCollected)
+                return res.status(404).json('Unsuffiscient sold');
+
+            const data = await transferFunds({
+                amount,
+                accountNumber,
+                bankCode,
+                senderEmail: contribution.admin.email,
+                senderPhone: contribution.admin.phone,
+                senderLastName: contribution.admin.name,
+                senderOtherNames: contribution.admin.name,
+                beneficiaryLastName: user.name,
+                beneficiaryOtherNames: user.name
+            });
+
+            if (data.ResponseCode === "90000") {
+                const transaction = await Transaction.create({
+                    amount,
+                    transactionReference: data.transactionReference,
+                    contribution: contribution._id,
+                    user: user._id
+                });
+
+                contribution.totalCollected -= amount;
+                await contribution.save();
+                return res.status(200).json("Funds Collected");
+            }
+            return res.status(404).json('Transfer Error');
+        } catch(error) {
+            return res.status(404).json(error);
+        }
+    },
+    collectTontine: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+            const cycleId = req.body.cycleId;
+            const amount = parseInt(req.body.amount);
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const cycle = await TontineCycle.findById(cycleId);
+            if (!cycle)
+                return res.status(404).json('Unknown Cycle');
+
+            const tontine = await TontineGroup.findById(cycle.tontineId).populate('admin');
+            if (!tontine)
+                return res.status(404).json('Without Admin we can t do anything');
+
+
+            if (cycle.beneficiary.toString() !== user._id.toString())
+                return res.status(403).json('Unauthorized! You aint this cycle beneficiary');
+
+            if (cycle.totalCollected < amount)
+                return res.status(404).json('Unsuffiscient Sold !');
+
+            const data = await transferFunds({
+                amount,
+                accountNumber,
+                bankCode,
+                senderEmail: tontine.admin.email,
+                senderPhone: tontine.admin.phone,
+                senderLastName: tontine.admin.name,
+                senderOtherNames: tontine.admin.name,
+                beneficiaryLastName: user.name,
+                beneficiaryOtherNames: user.name
+            });
+
+            if (data.ResponseCode === "90000") {
+                const transaction = await Transaction.create({
+                    amount,
+                    transactionReference: data.transactionReference,
+                    tontineCycle: cycle._id,
+                    tontineId: cycle.tontineId,
+                    user: user._id
+                });
+
+                cycle.totalCollected -= amount;
+                await cycle.save();
+                return res.status(200).json("Funds transfered");
+            }
+            return res.status(404).json('Transfer Error');
+        } catch(error) {
+            return res.status(404).json(error);
         }
     }
 })
@@ -256,9 +401,9 @@ const validateAccount = async (accessToken, accountNumber, bankCode) => {
     }
 };
 
-async function generateToken() {
-    const clientId = process.env.INTERSWITCH_CLIENT_ID;
-    const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+async function generateToken(cl_id, sc_key) {
+    const clientId = cl_id || process.env.INTERSWITCH_CLIENT_ID;
+    const secretKey = sc_key || process.env.INTERSWITCH_SECRET_KEY;
 
     const headers = {
         'Authorization': getAuthHeader(clientId, secretKey),
@@ -283,169 +428,57 @@ async function generateToken() {
     }
 };
 
-// const Transfer = () => {
-//   const [amount, setAmount] = useState("");
-//   const [accountNumber, setAccountNumber] = useState("");
-//   const [bankCode, setBankCode] = useState("");
-//   const [loading, setLoading] = useState(false);
-//   const [message, setMessage] = useState("");
-//   const [transactionDetails, setTransactionDetails] = useState(null);
+async function transferFunds(transferDetails) {    
+    const data = await generateToken(process.env.INTERSWITCH_TRANSFER_CLIENT_ID,
+        process.env.INTERSWITCH_TRANSFER_SECRET_KEY);
 
-//   const getAccessToken = async () => {
-//     const clientId = "TON_CLIENT_ID";
-//     const clientSecret = "TON_CLIENT_SECRET";
-//     const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+    const payload = {
+        transferCode: generateTransferCode(),
+        mac: calculateMac(transferDetails.amount.toString(), "566", "CA",  transferDetails.amount.toString(), "566", "AC", "NG"),
+        termination: {
+            amount: transferDetails.amount,
+            accountReceivable: {
+                accountNumber: transferDetails.accountNumber,
+                accountType: "00",
+            },
+            entityCode: transferDetails.bankCode,
+            currencyCode: "566",
+            paymentMethodCode: "AC",
+            countryCode: "NG",
+        },
+        sender: {
+            phone: transferDetails.senderPhone || "08124888436",
+            email: transferDetails.senderEmail || "dadubiaro@interswitch.com",
+            lastname: transferDetails.senderLastName || "Adubiaro",
+            othernames: transferDetails.senderOtherNames || "Deborah",
+        },
+        initiatingEntityCode: "PBL",
+        initiation: {
+            amount: transferDetails.amount,
+            currencyCode: "566",
+            paymentMethodCode: "CA",
+            channel: "7",
+        },
+        beneficiary: {
+            lastname: transferDetails.beneficiaryLastName || "ralph",
+            othernames: transferDetails.beneficiaryOtherNames || "apho",
+        },
+    };
 
-//     try {
-//       const response = await axios.post(
-//         "https://sandbox.interswitchng.com/passport/oauth/token",
-//         "grant_type=client_credentials",
-//         {
-//           headers: {
-//             "Content-Type": "application/x-www-form-urlencoded",
-//             Authorization: `Basic ${auth}`,
-//           },
-//         }
-//       );
-//       return response.data.access_token;
-//     } catch (error) {
-//       console.error("Erreur lors de l'obtention du token :", error.response.data);
-//       return null;
-//     }
-//   };
+    const response = await axios.post(
+        "https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/TransferFunds",
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${data.access_token}`,
+                "Content-Type": "application/json",
+                accept: "application/json",
+                terminalId: "3PBL",
+            }
+        }
+    );
 
-//   const initiateTransfer = async (accessToken, transferDetails) => {
-//     const payload = {
-//       transferCode: "030009998999",
-//       mac: "9f4e4f53c57be63e1f08d8f07a7bc1a9461e4a7d5304043daa1ef54bd727b6cde148f4fbfc5e2ad8c4a60f78dfa76304de671fbeb70657b1628f14b6b6baa5e1",
-//       termination: {
-//         amount: transferDetails.amount,
-//         accountReceivable: {
-//           accountNumber: transferDetails.accountNumber,
-//           accountType: "00",
-//         },
-//         entityCode: transferDetails.bankCode,
-//         currencyCode: "566",
-//         paymentMethodCode: "AC",
-//         countryCode: "NG",
-//       },
-//       sender: {
-//         phone: transferDetails.senderPhone,
-//         email: transferDetails.senderEmail,
-//         lastname: transferDetails.senderLastName,
-//         othernames: transferDetails.senderOtherNames,
-//       },
-//       initiatingEntityCode: "PBL",
-//       initiation: {
-//         amount: transferDetails.amount,
-//         currencyCode: "566",
-//         paymentMethodCode: "CA",
-//         channel: "7",
-//       },
-//       beneficiary: {
-//         lastname: transferDetails.beneficiaryLastName || "",
-//         othernames: transferDetails.beneficiaryOtherNames || "",
-//       },
-//     };
-
-//     try {
-//       const response = await axios.post(
-//         "https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/TransferFunds",
-//         payload,
-//         {
-//           headers: {
-//             Authorization: `Bearer ${accessToken}`,
-//             "Content-Type": "application/json",
-//             terminalId: "3PBL",
-//           },
-//         }
-//       );
-//       return response.data;
-//     } catch (error) {
-//       console.error("Erreur lors du transfert :", error.response.data);
-//       return null;
-//     }
-//   };
-
-//   const handleTransfer = async () => {
-//     setLoading(true);
-//     setMessage("");
-
-//     const accessToken = await getAccessToken();
-//     if (!accessToken) {
-//       setMessage("Erreur d'authentification. Veuillez réessayer.");
-//       setLoading(false);
-//       return;
-//     }
-
-//     // Détails du transfert
-//     const transferDetails = {
-//       amount: parseFloat(amount) * 100,
-//       accountNumber: accountNumber,
-//       bankCode: bankCode,
-//       senderPhone: "08124888436",
-//       senderEmail: "dadubiaro@interswitch.com",
-//       senderLastName: "Adubiaro",
-//       senderOtherNames: "Deborah",
-//       beneficiaryLastName: "ralph",
-//       beneficiaryOtherNames: "ralpo",
-//     };
-
-//     // Initier le transfert
-//     const result = await initiateTransfer(accessToken, transferDetails);
-//     if (result) {
-//       setTransactionDetails(result);
-//       setMessage("Transfert réussi !");
-//     } else {
-//       setMessage("Erreur lors du transfert. Veuillez réessayer.");
-//     }
-
-//     setLoading(false);
-//   };
-
-//   return (
-//     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-//       <h1>Transfert d'Argent</h1>
-//       <div>
-//         <label>Montant (NGN) :</label>
-//         <input
-//           type="number"
-//           value={amount}
-//           onChange={(e) => setAmount(e.target.value)}
-//         />
-//       </div>
-//       <div>
-//         <label>Numéro de Compte :</label>
-//         <input
-//           type="text"
-//           value={accountNumber}
-//           onChange={(e) => setAccountNumber(e.target.value)}
-//         />
-//       </div>
-//       <div>
-//         <label>Code de la Banque :</label>
-//         <input
-//           type="text"
-//           value={bankCode}
-//           onChange={(e) => setBankCode(e.target.value)}
-//         />
-//       </div>
-//       <button onClick={handleTransfer} disabled={loading}>
-//         {loading ? "Traitement..." : "Transférer"}
-//       </button>
-//       {message && <p>{message}</p>}
-//       {transactionDetails && (
-//         <div>
-//           <h2>Détails de la Transaction</h2>
-//           <p>Référence : {transactionDetails.TransactionReference}</p>
-//           <p>Date : {transactionDetails.TransactionDate}</p>
-//           <p>Statut : {transactionDetails.ResponseCodeGrouping}</p>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default Transfer;
+    return response.data;
+}
 
 module.exports = interswitchController;
