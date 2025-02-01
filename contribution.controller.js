@@ -5,7 +5,7 @@ const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
 const GOOGLE_PASS = process.env.GOOGLE_PASS; //'gdls oztc hqmr vdpf'
-const nodemailer = require('nodemailer')
+const nodemailer = require('nodemailer');
 
 const sendEmail = async (destinataire, sujet, message) => {
     try {
@@ -156,7 +156,20 @@ const contributionController = ({
             return res.status(404).json('error');
         }
     },
-    payContibution: async(req, res) => {
+    getMembers: async(req, res) => {
+        try {
+            const groupId = req.query.groupId;
+
+            const group = await ContributionGroup.findById(groupId).populate('members.userId', 'name email');
+
+            if (!group) return res.status(404).json('Group not found');
+
+            return res.status(200).json(group.members);
+        } catch (error) {
+            return res.status(404).json(error);
+        }
+    },
+    accept: async(req, res) => {
         try {
             const {amount, groupId} = req.body;
             const userId = req.query.userId;
@@ -235,19 +248,6 @@ const contributionController = ({
             //Collection
 
             return res.status(200).json('Let s collect our money');
-        } catch (error) {
-            return res.status(404).json(error);
-        }
-    },
-    getMembers: async(req, res) => {
-        try {
-            const groupId = req.query.groupId;
-
-            const group = await ContributionGroup.findById(groupId).populate('members.userId', 'name email');
-
-            if (!group) return res.status(404).json('Group not found');
-
-            return res.status(200).json(group.members);
         } catch (error) {
             return res.status(404).json(error);
         }
