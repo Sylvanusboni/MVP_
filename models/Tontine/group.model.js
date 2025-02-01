@@ -12,7 +12,7 @@ const TontineGroup = new mongoose.Schema({
     contributionAmount: Number,
     cycleDuration: Number,
     startDate: Date,
-    status: String,
+    status: {type: String, enum: ['pending', 'started', 'completed'], default: 'pending'},
     totalCollected: Number,
 });
 

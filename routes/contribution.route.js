@@ -10,4 +10,8 @@ router.get('/user', Contribution.getUserGroups);
 
 router.post('/invite', Contribution.inviteMembers);
 
+router.post('/pay', Contribution.payContibution);
+
+router.post('/collect', Contribution.collect);
+
 module.exports = router;

@@ -3,6 +3,7 @@ const TontineCycle = require('../models/Tontine/cycle.model');
 const TontinePayment = require('../models/Tontine/payment.model');
 const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
+const Transaction = require('../models/transaction.model');
 
 async function sendInvitation(groupType, sender, groupId, dest)
 {
@@ -17,16 +18,60 @@ async function sendInvitation(groupType, sender, groupId, dest)
     //Handle Expiry Date
 }
 
+async function generateToken() {
+    const clientId = process.env.INTERSWITCH_CLIENT_ID;
+    const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+
+    const headers = {
+        'Authorization': getAuthHeader(clientId, secretKey),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'accept': 'application/json'
+    };
+
+    try {
+        // 'https://sandbox.interswitchng.com/passport/oauth/token?env=test',
+        const response = await axios.post(
+            'https://passport.k8.isw.la/passport/oauth/token?grant_type=client_credentials',
+            'grant_type=client_credentials',
+            {
+                headers
+            }
+        );
+        console.log(response.data);
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        console.error('Error generating token:', error);
+    }
+};
+
 const TontineController = ({
+    getUserTontine: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const tontines = await TontineGroup.find({members: {$elemMatch: {userId: user._id}}}).populate('members.userId', 'name email').populate('admin', 'name email');
+            const admins = await TontineGroup.find({admin: user._id}).populate('members.userId', 'name email').populate('admin', 'name email');
+
+            return res.status(200).json(tontines);
+        } catch (error) {
+            return res.status(404).json(error);
+        }
+    },
     create: async(req, res) => {
         try {
             const {name, contributionAmount, cycleDuration, members, startDate} = req.body;
 
-            if (!name || !contributionAmount || !cycleDuration || !members || !startDate) {
+            if (!name || !contributionAmount || !cycleDuration || !members || !startDate || contributionAmount === 0) {
                 return res.status(400).json({message: 'All fields are required'});
             }
 
-            const user = await User.findById(req.query.userId || req.body.userId || req.user.id);
+            const user = await User.findById(req.query.userId);
 
             if (!user) {
                 return res.status(404).json('Undefined User');
@@ -55,7 +100,7 @@ const TontineController = ({
             const {tontineId} = req.params;
 
             const tontine = await TontineGroup.findById(tontineId);
-            if (!tontine) return res.status(404).json({ message: 'Tontine not found' });
+            if (!tontine) return res.status(404).json({ message: 'Tontine not found'});
 
             if (tontine.status !== 'pending') {
                 return res.status(400).json({ message: 'Tontine already started or completed'});
@@ -65,6 +110,14 @@ const TontineController = ({
             const cycleDuration = tontine.cycleDuration;
             const members = tontine.members;
 
+            const _members = members.map(it => {
+                return {
+                    userId: it.userId,
+                    payed: 0,
+                    rest: tontine.contributionAmount
+                }
+            })
+
             for (let i = 0; i < members.length; i++) {
                 const cycle = new TontineCycle({
                     tontineId,
@@ -73,6 +126,8 @@ const TontineController = ({
                     dueDate: new Date(startDate.getTime() + i * cycleDuration * 24 * 60 * 60 * 1000),
                     status: 'pending',
                     collectedAmount: 0,
+                    members: _members,
+                    collected: false
                 });
                 await cycle.save();
             }
@@ -175,15 +230,14 @@ const TontineController = ({
                 if (!tontine) {
                     return res.status(404).json('Undefined Tontine');
                 }
-                const cycles = await TontineCycle.find({tontineId: tontine._id});
+                const cycles = await TontineCycle.find({tontineId: tontine._id}).populate('members.userId', 'name email').populate('beneficiary', 'name email');
                 return res.status(200).json(cycles);
             }
             if (req.query.cycleId) {
-                const tontineCycle = await TontineCycle.findById(cycleId);
-    
-                if (!tontineCycle) {
+                const tontineCycle = await TontineCycle.findById(cycleId).populate('members.userId', 'name email').populate('beneficiary', 'name email');
+
+                if (!tontineCycle)
                     return res.status(404).json('Invalid Cycle');
-                }
                 return res.status(200).json(tontineCycle);
             }
 
@@ -238,11 +292,91 @@ const TontineController = ({
             return res.status(404).json(error);
         }
     },
-    deleteMember: async(req, res) => {
+    collectTontine: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+            const cycleId = req.body.cycleId;
 
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const cycle = await TontineCycle.findById(cycleId);
+            if (!cycle) {
+                return res.status(404).json('Unknown Cycle');
+            }
+
+            if (cycle.beneficiary.toString() !== user._id.toString()) {
+                return res.status(403).json('Unauthorized! You aint this cycle beneficiary');
+            }
+
+            return res.status(200).json('Keep Going Man')
+        } catch (error) {
+
+        }
     },
-    delete: async(req, res) => {
-        
+    payTontine: async(req, res) => {
+        try {
+            const {amount, cycleId} = req.body;
+            const userId = req.query.userId;
+
+            const user = await User.findById(userId);
+
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const cycle = await TontineCycle.findById(cycleId);
+            if (!cycle) {
+                return res.status(404).json('Unknown Cycle');
+            }
+
+            const member = cycle.members.find(it => it.userId.toString() === user._id.toString());
+            if (!member) {
+                return res.status(404).json('He is not in this tontine');
+            }
+            if (member.rest === 0) {
+                return res.status(404).json('Already Payed for this Cycle');
+            }
+
+            const data = await generateToken();
+            const merchantCode = data.merchant_code;
+            const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
+
+            const headers = {
+                Authorization: `Bearer ${data.access_token}`,
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            }
+            const transactionReference = `MVP-TTN-${user._id}-${Date.now()}`;
+            const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
+                    "merchantCode": merchantCode,
+                    "payableCode": paymentItemId,
+                    "amount": amount * 100,
+                    "redirectUrl": "http://localhost:8080/api/interswitch/callback",
+                    "customerId": user.email,
+                    "currencyCode": "566",
+                    "customerEmail": user.email,
+                    "transactionReference": transactionReference
+                },
+                {headers}
+            );
+            console.log(response.data);
+            const newContribution = await Transaction.create({
+                amount,
+                transactionReference: transactionReference,
+                tontineCycle: cycle._id,
+                tontineId: cycle.tontineId,
+                user: user._id
+            });
+            
+            await newContribution.save();
+            await campaign.save();
+            return res.status(200).json(response.data);
+        } catch (error) {
+            return res.status(404).json('Payment')
+        }
     }
 });
 
@@ -255,3 +389,5 @@ cron.schedule('0 9 * * *', async () => {
         }
     });
 });
+
+module.exports = TontineController;

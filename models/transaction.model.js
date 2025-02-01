@@ -8,7 +8,7 @@ const TransactionSchema = new mongoose.Schema({
     campaignId: {type: mongoose.Schema.Types.ObjectId, ref: 'Campaign'},
     tontineId: {type: mongoose.Schema.Types.ObjectId, ref: 'TontineGroupe'},
     tontineCycle: {type: mongoose.Schema.Types.ObjectId, ref: 'TontineCycle'},
-    contribution: {type: mongoose.Schema.Types.ObjectId, ref: 'Contribution'},
+    contribution: {type: mongoose.Schema.Types.ObjectId, ref: 'ContributionGroup'},
     user:{type: mongoose.Schema.Types.ObjectId, ref: 'User'},
     external: {type: Boolean, default: false},
     email: String

@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const ContributionGroupSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    description: { type: String },
-    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, 
+    description: { type: String},
+    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true}, 
     members: [{
             userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User'},
             status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending'},

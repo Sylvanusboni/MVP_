@@ -28,5 +28,8 @@ app.use('/api/contribution', require('./routes/contribution.route'));
 
 app.use('/api/invitation', require('./routes/invitation.route'));
 
+
+app.use('/api/tontine', require('./routes/tontine.route'))
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

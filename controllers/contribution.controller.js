@@ -3,6 +3,7 @@ const groupModel = require('../models/Contribution/group.model');
 const ContributionGroup = require('../models/Contribution/group.model');
 const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
+const Transaction = require('../models/transaction.model');
 const GOOGLE_PASS = process.env.GOOGLE_PASS; //'gdls oztc hqmr vdpf'
 
 const sendEmail = async (destinataire, sujet, message) => {
@@ -152,11 +153,87 @@ const contributionController = ({
             return res.status(404).json('error');
         }
     },
-    accept: async(req, res) => {
+    payContibution: async(req, res) => {
         try {
+            const {amount, groupId} = req.body;
+            const userId = req.query.userId;
 
-        } catch (error) {
+            const user = await User.findById(userId);
+
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const group = await ContributionGroup.findById(groupId);
+            if (!group)
+                return res.status(404).json('Unknown Cycle');
+
+            const member = group.members.find(it => it.userId.toString() === user._id.toString());
+            if (!member) {
+                return res.status(404).json('This user is not in this Contribution Group');
+            }
+
+            const data = await generateToken();
+            const merchantCode = data.merchant_code;
+            const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
+
+            const headers = {
+                Authorization: `Bearer ${data.access_token}`,
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            }
+            const transactionReference = `MVP-CTN-${user._id}-${Date.now()}`;
+            const response = await axios.post('https://qa.interswitchng.com/paymentgateway/api/v1/paybill',{
+                    "merchantCode": merchantCode,
+                    "payableCode": paymentItemId,
+                    "amount": amount * 100,
+                    "redirectUrl": "http://localhost:8080/api/interswitch/callback",
+                    "customerId": user.email,
+                    "currencyCode": "566",
+                    "customerEmail": user.email,
+                    "transactionReference": transactionReference
+                },
+                {headers}
+            );
+            console.log(response.data);
+            const newContribution = await Transaction.create({
+                amount,
+                transactionReference: transactionReference,
+                contribution: group._id,
+                user: user._id
+            });
             
+            await newContribution.save();
+            await campaign.save();
+            return res.status(200).json(response.data);
+        } catch (error) {
+            return res.status(404).json(error);
+        }
+    },
+    collect: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+            const groupId = req.body.groupId;
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const contribution = await ContributionGroup.findById(groupId);
+            if (!contribution) {
+                return res.status(404).json('Unknown Contribution');
+            }
+
+            if (contribution.admin.toString() !== user._id.toString()) {
+                return res.status(403).json('Unauthorized! Only Admin can collect');
+            }
+
+            //Collection
+
+            return res.status(200).json('Let s collect our money');
+        } catch (error) {
+            return res.status(404).json(error);
         }
     }
 })

@@ -180,6 +180,37 @@ const interswitchController = ({
     }
 })
 
+const crypto = require("crypto");
+
+function calculateMac(initiatingAmount,
+    initiatingCurrencyCode, initiatingPaymentMethodCode,
+    terminatingAmount, terminatingCurrencyCode,
+    terminatingPaymentMethodCode, terminatingCountryCode) {
+
+  const data = `${initiatingAmount}${initiatingCurrencyCode}${initiatingPaymentMethodCode}${terminatingAmount}${terminatingCurrencyCode}${terminatingPaymentMethodCode}${terminatingCountryCode}`;
+  return crypto.createHash("sha512").update(data).digest("hex");
+};
+
+const validateAccount = async (accessToken, accountNumber, bankCode) => {
+    try {
+      const response = await axios.get(
+        `https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/DoAccountNameInquiry?accountNumber=${accountNumber}&bankCode=${bankCode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            terminalId: '3PBL0001',
+            bankCode: bankCode,
+            accountId: accountNumber
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Erreur lors de la validation du compte :", error.response.data);
+      return null;
+    }
+  };
+
 async function generateToken() {
     const clientId = process.env.INTERSWITCH_CLIENT_ID;
     const secretKey = process.env.INTERSWITCH_SECRET_KEY;
@@ -207,83 +238,169 @@ async function generateToken() {
     }
 };
 
-async function startTransaction(req, res) {
-    const token = await generateToken();
+const Transfer = () => {
+  const [amount, setAmount] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [transactionDetails, setTransactionDetails] = useState(null);
 
-    const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-    };
+  const getAccessToken = async () => {
+    const clientId = "TON_CLIENT_ID";
+    const clientSecret = "TON_CLIENT_SECRET";
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
-    const transactionData = {
-        amount: 50000, // Montant en Kobo (50,000 = 500 NGN)
-        customerId: "12345",
-        currency: "NGN",
-        transactionRef: "TRANS-12345",
-        redirectUrl: "http://localhost:8080/payment/callback",
-        paymentItem: "Dons pour l'association",
+    try {
+      const response = await axios.post(
+        "https://sandbox.interswitchng.com/passport/oauth/token",
+        "grant_type=client_credentials",
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Basic ${auth}`,
+          },
+        }
+      );
+      return response.data.access_token;
+    } catch (error) {
+      console.error("Erreur lors de l'obtention du token :", error.response.data);
+      return null;
+    }
+  };
+
+  const initiateTransfer = async (accessToken, transferDetails) => {
+    const payload = {
+      transferCode: "030009998999",
+      mac: "9f4e4f53c57be63e1f08d8f07a7bc1a9461e4a7d5304043daa1ef54bd727b6cde148f4fbfc5e2ad8c4a60f78dfa76304de671fbeb70657b1628f14b6b6baa5e1",
+      termination: {
+        amount: transferDetails.amount,
+        accountReceivable: {
+          accountNumber: transferDetails.accountNumber,
+          accountType: "00",
+        },
+        entityCode: transferDetails.bankCode,
+        currencyCode: "566",
+        paymentMethodCode: "AC",
+        countryCode: "NG",
+      },
+      sender: {
+        phone: transferDetails.senderPhone,
+        email: transferDetails.senderEmail,
+        lastname: transferDetails.senderLastName,
+        othernames: transferDetails.senderOtherNames,
+      },
+      initiatingEntityCode: "PBL",
+      initiation: {
+        amount: transferDetails.amount,
+        currencyCode: "566",
+        paymentMethodCode: "CA",
+        channel: "7",
+      },
+      beneficiary: {
+        lastname: transferDetails.beneficiaryLastName || "",
+        othernames: transferDetails.beneficiaryOtherNames || "",
+      },
     };
 
     try {
-        const response = await axios.post(
-            'https://sandbox.interswitchng.com/payments/api/v1/payment-requests',
-            transactionData,
-            { headers }
-        );
-
-        console.log('Transaction started successfully:', response.data);
-        return response.data.paymentUrl; // URL à laquelle rediriger l'utilisateur pour payer
+      const response = await axios.post(
+        "https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/TransferFunds",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            terminalId: "3PBL",
+          },
+        }
+      );
+      return response.data;
     } catch (error) {
-        console.error('Error starting transaction:', error.response.data);
+      console.error("Erreur lors du transfert :", error.response.data);
+      return null;
     }
-};
+  };
 
-const validateTransaction = async (transactionRef) => {
-    const token = await generateToken();
+  const handleTransfer = async () => {
+    setLoading(true);
+    setMessage("");
 
-    const headers = {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setMessage("Erreur d'authentification. Veuillez réessayer.");
+      setLoading(false);
+      return;
+    }
+
+    // Détails du transfert
+    const transferDetails = {
+      amount: parseFloat(amount) * 100,
+      accountNumber: accountNumber,
+      bankCode: bankCode,
+      senderPhone: "08124888436",
+      senderEmail: "dadubiaro@interswitch.com",
+      senderLastName: "Adubiaro",
+      senderOtherNames: "Deborah",
+      beneficiaryLastName: "ralph",
+      beneficiaryOtherNames: "ralpo",
     };
 
-    try {
-        const response = await axios.get(
-            `https://sandbox.interswitchng.com/payments/api/v1/transactions/${transactionRef}`,
-            { headers }
-        );
-
-        console.log('Transaction status:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('Error validating transaction:', error.response.data);
+    // Initier le transfert
+    const result = await initiateTransfer(accessToken, transferDetails);
+    if (result) {
+      setTransactionDetails(result);
+      setMessage("Transfert réussi !");
+    } else {
+      setMessage("Erreur lors du transfert. Veuillez réessayer.");
     }
+
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <h1>Transfert d'Argent</h1>
+      <div>
+        <label>Montant (NGN) :</label>
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+      </div>
+      <div>
+        <label>Numéro de Compte :</label>
+        <input
+          type="text"
+          value={accountNumber}
+          onChange={(e) => setAccountNumber(e.target.value)}
+        />
+      </div>
+      <div>
+        <label>Code de la Banque :</label>
+        <input
+          type="text"
+          value={bankCode}
+          onChange={(e) => setBankCode(e.target.value)}
+        />
+      </div>
+      <button onClick={handleTransfer} disabled={loading}>
+        {loading ? "Traitement..." : "Transférer"}
+      </button>
+      {message && <p>{message}</p>}
+      {transactionDetails && (
+        <div>
+          <h2>Détails de la Transaction</h2>
+          <p>Référence : {transactionDetails.TransactionReference}</p>
+          <p>Date : {transactionDetails.TransactionDate}</p>
+          <p>Statut : {transactionDetails.ResponseCodeGrouping}</p>
+        </div>
+      )}
+    </div>
+  );
 };
 
-async function initiatePayment(amount, transactionRef, description, returnUrl) {
-    try {
-        const authHeader = await getAuthHeader();
-        const response = await axios.post(
-            `${baseURL}/ipg/payments`,
-            {
-                amount,
-                transactionRef,
-                description,
-                returnUrl,
-                currency: "NGN", // Devise (à ajuster selon le cas)
-            },
-            {
-                headers: {
-                    Authorization: authHeader,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-
-        return response.data;
-    } catch (error) {
-        console.error('Error initiating payment:', error.response?.data || error.message);
-        throw new Error('Failed to initiate payment');
-    }
-};
+export default Transfer;
 
 module.exports = interswitchController;
