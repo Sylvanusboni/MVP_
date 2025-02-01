@@ -380,14 +380,14 @@ const TontineController = ({
     }
 });
 
-cron.schedule('0 9 * * *', async () => {
-    const pendingPayments = await TontinePayment.find({ paymentStatus: 'pending' });
-    pendingPayments.forEach(async (payment) => {
-        const user = await User.findById(payment.memberId);
-        if (user) {
-            await sendReminderEmail(user.email, payment.amount);
-        }
-    });
-});
+// cron.schedule('0 9 * * *', async () => {
+//     const pendingPayments = await TontinePayment.find({ paymentStatus: 'pending' });
+//     pendingPayments.forEach(async (payment) => {
+//         const user = await User.findById(payment.memberId);
+//         if (user) {
+//             await sendReminderEmail(user.email, payment.amount);
+//         }
+//     });
+// });
 
 module.exports = TontineController;
