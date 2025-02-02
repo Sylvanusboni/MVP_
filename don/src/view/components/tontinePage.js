@@ -27,6 +27,18 @@ export default function TontinePage() {
   });
   // const [members, setMembers] = useState([]);
   const [contributionAmount, setContributionAmount] = useState("");
+  const [cycles, setCycles] = useState([]);
+  const [selectedCycleId, setSelectedCycleId] = useState(null);
+
+  const fetchCycles = async (tontineId) => {
+    try {
+      const response = await getCycle(tontineId);
+      setCycles(response.data);
+    } catch (error) {
+      console.error("Error fetching cycles:", error);
+    }
+  };
+
 
   useEffect(() => {
     loadTontines();
@@ -43,34 +55,57 @@ export default function TontinePage() {
     }
   };
 
+  // const handlePayTontine = async () => {
+  //   try {
+  //     const response = await getCycle(selectedTontine._id);
+  //     console.log('response', response.data);
+  //     const user = localStorage.getItem('userId');
+  
+  //     // Extract the first cycle's _id
+  //     const cycleId = response.data.length > 0 ? response.data[0]._id : null;
+      
+  //     if (!cycleId) {
+  //       throw new Error('Cycle ID not found');
+  //     }
+  
+  //     const paymentResponse = await axios.post(`${API_BASE_URL}/pay/?userId=${user}`, {
+  //       cycleId: cycleId,
+  //       amount: contributionAmount,
+  //     });
+  //     setOpenPaymentDialog(false);
+  //     localStorage.setItem('amount', paymentResponse.data.amount);
+  //     localStorage.setItem('transactionReference', paymentResponse.data.transactionReference);
+
+  //     console.log('Payment successful:', paymentResponse.data);
+  //     window.location.href = paymentResponse.data.paymentUrl;
+  //   } catch (error) {
+  //     console.error('Error processing payment:', error);
+  //   }
+  // };
+
   const handlePayTontine = async () => {
     try {
-      const response = await getCycle(selectedTontine._id);
-      console.log('response', response.data);
-      const user = localStorage.getItem('userId');
-  
-      // Extract the first cycle's _id
-      const cycleId = response.data.length > 0 ? response.data[0]._id : null;
-      
-      if (!cycleId) {
-        throw new Error('Cycle ID not found');
+      const user = localStorage.getItem("userId");
+      if (!selectedCycleId) {
+        throw new Error("No cycle selected for payment.");
       }
   
       const paymentResponse = await axios.post(`${API_BASE_URL}/pay/?userId=${user}`, {
-        cycleId: cycleId,
+        cycleId: selectedCycleId,
         amount: contributionAmount,
       });
+  
       setOpenPaymentDialog(false);
-      localStorage.setItem('amount', paymentResponse.data.amount);
-      localStorage.setItem('transactionReference', paymentResponse.data.transactionReference);
-      
-      console.log('Payment successful:', paymentResponse.data);
+      localStorage.setItem("amount", paymentResponse.data.amount);
+      localStorage.setItem("transactionReference", paymentResponse.data.transactionReference);
+  
+      console.log("Payment successful:", paymentResponse.data);
       window.location.href = paymentResponse.data.paymentUrl;
     } catch (error) {
-      console.error('Error processing payment:', error);
+      console.error("Error processing payment:", error);
     }
   };
-
+  
   const handleCreateTontine = async () => {
     try {
       await createTontine(newTontine);
@@ -130,8 +165,9 @@ export default function TontinePage() {
     }
   };
   
-  const handleViewClick = (tontine) => {
+  const handleViewClick = async (tontine) => {
     setSelectedTontineView(tontine);
+    fetchCycles(tontine._id);
   };
 
   const handleClose = () => {
@@ -287,7 +323,7 @@ export default function TontinePage() {
             </DialogActions>
           </Dialog>
            {/* Payment Dialog */}
-      <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
+      {/* <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
         <DialogTitle>Pay Contribution</DialogTitle>
         <DialogContent>
           <TextField
@@ -305,10 +341,30 @@ export default function TontinePage() {
             {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm Payment"}
           </Button>
         </DialogActions>
+      </Dialog> */}
+      <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
+        <DialogTitle>Pay Contribution for Cycle</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Contribution Amount"
+            type="number"
+            value={contributionAmount}
+            onChange={(e) => setContributionAmount(e.target.value)}
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPaymentDialog(false)}>Cancel</Button>
+          <Button onClick={handlePayTontine} variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm Payment"}
+          </Button>
+        </DialogActions>
       </Dialog>
+
       {/* View Tontine Dialog */}
       <Dialog open={Boolean(selectedTontineView)} onClose={handleClose} fullWidth maxWidth="sm">
-        {selectedTontineView && (
+        {/* {selectedTontineView && (
           <>
             <DialogTitle>{selectedTontineView.name} - Details</DialogTitle>
             <DialogContent dividers>
@@ -335,7 +391,43 @@ export default function TontinePage() {
               <Button onClick={handleClose} variant="contained">Close</Button>
             </DialogActions>
           </>
-        )}
+        )} */}
+        <Typography variant="h6" sx={{ marginTop: 2 }}>Cycles</Typography>
+          <List>
+            {cycles.map((cycle) => (
+              <ListItem key={cycle._id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
+                <Typography variant="body1">
+                  <strong>Cycle {cycle.cycleNumber}</strong> - Status: {cycle.status}
+                </Typography>
+                <Typography variant="body2">Due Date: {new Date(cycle.dueDate).toDateString()}</Typography>
+                <Typography variant="body2">Collected Amount: {cycle.collectedAmount}</Typography>
+                <Typography variant="body2">Collected: {cycle.collected ? "Yes" : "No"}</Typography>
+                
+                <Typography variant="body2" sx={{ marginTop: 1 }}>Members:</Typography>
+                <List sx={{ paddingLeft: 2 }}>
+                  {cycle.members.map((member) => (
+                    <ListItem key={member._id}>
+                      <ListItemText
+                        primary={`${member.userId.name} (${member.userId.email})`}
+                        secondary={`Paid: ${member.payed} - Remaining: ${member.rest}`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+
+                <Button 
+                  variant="contained" 
+                  onClick={() => {
+                    setSelectedCycleId(cycle._id);
+                    setOpenPaymentDialog(true);
+                  }}
+                >
+                  Pay for Cycle
+                </Button>
+              </ListItem>
+            ))}
+          </List>
+
       </Dialog>
     </Container>
   );
