@@ -15,6 +15,9 @@ const CotisationList = () => {
   const [emailsToInvite, setEmailsToInvite] = useState('');
   const [error, setError] = useState('');
   const userId = localStorage.getItem('userId');
+  const [isAdmin1, setIsAdmin] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false); 
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,51 +41,43 @@ const CotisationList = () => {
       fetchUserGroups();
     }, [ fetchUserGroups]);
 
-    // const handleSelectGroup = (groupId) => {
-    //   if (!userGroups || !Array.isArray(userGroups.admins)) {
-    //     console.error("userGroups.admins is not an array:", userGroups);
-    //     return;
-    //   }
-    
-    //   console.log("Searching for groupId:", groupId);
-    //   console.log("Available groups:", userGroups.admins.map(group => group._id));
-    
-    //   const selected = userGroups.admins.find(group => String(group._id) === String(groupId));
-    
-    //   if (!selected) {
-    //     console.warn("No group found with ID:", groupId);
-    //     return;
-    //   }
-    
-    //   setSelectedGroup(selected);
-    //   console.log("Selected Group:", selected);
-    // };
-
-    const handleSelectGroup = (groupId) => {
-      if (!userGroups || !Array.isArray(userGroups.groups)) {
-        console.error("userGroups.groups is not an array:", userGroups);
+    const handleSelectGroup = (groupId, num) => {
+      if (!userGroups) {
+        console.error("userGroups is undefined");
         return;
       }
-  
+    
+      // Ensure groups and admins are arrays before accessing them
+      const groupsArray = Array.isArray(userGroups.groups) ? userGroups.groups : [];
+      const adminsArray = Array.isArray(userGroups.admins) ? userGroups.admins : [];
+    
       console.log("Searching for groupId:", groupId);
-      console.log("Available groups:", userGroups.groups.map(group => group._id));
-  
-      const selected = userGroups.groups.find(group => String(group._id) === String(groupId));
-  
+      console.log("Available groups:", groupsArray.map(group => group._id));
+      console.log("Available admins:", adminsArray.map(admin => admin._id));
+    
+      // Search in both groups and admins
+      const selected = [...groupsArray, ...adminsArray].find(group => String(group._id) === String(groupId));
+    
       if (!selected) {
         console.warn("No group found with ID:", groupId);
         return;
       }
-  
+
+      // Check if the user is an admin or a member
+      setIsAdmin(adminsArray.some(admin => admin._id === groupId));
+      setIsMember(groupsArray.some(group => group._id === groupId));
+
+      if (num === 2) setOpenDialog(true); 
       setSelectedGroup(selected);
       console.log("Selected Group:", selected);
     };
-  
-    // Determine if the current user is an admin for the selected group
+    
+    // Determine if the current user is an admin for the selected group 
     const isAdmin = (group) => {
+      console.log('Checking if user is admin:', group.admin._id, userGroups.userId);
       return group.admin._id === userGroups.userId;
     };
-    
+      
     const handleInvite = async () => {
       console.log('Inviting members:', emailsToInvite);
       setOpenInviteDialog(true);
@@ -118,7 +113,6 @@ const CotisationList = () => {
       }
     };
     
-
   // Handle form input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -145,6 +139,43 @@ const CotisationList = () => {
     }
   };
 
+  const handlePayCotisation = async () => {
+    const userId = localStorage.getItem("userId");
+  
+    if (!selectedGroup || !selectedGroup._id) {
+      console.error("No group selected");
+      return;
+    }
+  
+    const amount = selectedGroup.contributionAmount; // Ensure amount is correct
+  
+    console.log("Processing payment for cotisation...");
+  
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/pay/?userId=${userId}`,
+        {
+          amount,
+          groupId: selectedGroup._id,
+        }
+      );
+  
+      console.log("Payment Response:", response.data);
+      localStorage.setItem("amount", response.data.amount);
+      localStorage.setItem("transactionReference", response.data.transactionReference);
+  
+      // If Interswitch returns a payment URL, redirect the user
+      if (response.data.paymentUrl) {
+        window.location.href = response.data.paymentUrl; // Redirect to payment gateway
+      } else {
+        alert("Payment initiated successfully!");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("Failed to process payment. Please try again.");
+    }
+  };
+
   // Handle joining a group
   const handleJoin = () => {
     setLoading(true);
@@ -164,148 +195,65 @@ const CotisationList = () => {
           Create Cotisation Group
         </Button>
       </Box>
-      {/* {selectedGroup ? (
-        <Card sx={{ p: 3 }}>
-          <Typography variant="h5">{selectedGroup.name}</Typography>
-          <Typography variant="body1">Description: {selectedGroup.description}</Typography>
-          <Typography variant="body1">Admin ID: {selectedGroup.admin}</Typography>
-          <Typography variant="body1">Frequency: {selectedGroup.frequency}</Typography>
-          <Typography variant="body1">Contribution Amount: ${selectedGroup.contributionAmount}</Typography>
-          <Typography variant="body1">Total Collected: ${selectedGroup.totalCollected}</Typography>
-          <Typography variant="body2">Members:</Typography>
-          <ul>
-            {selectedGroup.members?.length > 0 ? (
-              selectedGroup.members.map((member, index) => (
-                <li key={index}>
-                  {member.userId?.name} ({member.userId?.email}) - {member.status}
-                </li>
-              ))
-            ) : (
-              <Typography variant="body2">No members yet</Typography>
-            )}
-          </ul>
-          <Button variant="outlined" sx={{ mr: 2 }} onClick={() => setSelectedGroup(null)}>
-            Close
-          </Button>
-          <Button variant="contained" color="primary" onClick={() => setOpenJoinDialog(true)}>
-            Join
-          </Button>
-        </Card>
-      ) : (
-        <Grid container spacing={3}>
-          {(userGroups.admins?.length > 0 ? userGroups.admins : []).map((group) => (
-            <Grid item xs={12} sm={6} md={4} key={group._id}>
-              <Card sx={{ p: 2 }}>
-                <CardContent>
-                  <Typography variant="h6">{group.name}</Typography>
-                  <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
-                  <Typography variant="body2">Frequency: {group.frequency}</Typography>
-                  <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
-                  <Button
-                      variant="outlined"
-                      sx={{ mt: 1, mr: 1 }}
-                      onClick={() => {
-                        handleSelectGroup(group._id);  // First, select the group
-                        setTimeout(handleInvite, 100); // Then, execute handleInvite after a short delay
-                      }}
-                    >
-                      Invite
-                    </Button>
+     
+      <Grid container spacing={3}>
+        {/* Display groups where the user is a member */}
+        {(userGroups.groups?.length > 0 ? userGroups.groups : []).map((group) => (
+          <Grid item xs={12} sm={6} md={4} key={group._id}>
+            <Card sx={{ p: 2 }}>
+              <CardContent>
+                <Typography variant="h6">{group.name}</Typography>
+                <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
+                <Typography variant="body2">Frequency: {group.frequency}</Typography>
+                <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
 
-                  <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id)}>
-                    View
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )} */}
-      {selectedGroup ? (
-        <Card sx={{ p: 3 }}>
-          <Typography variant="h5">{selectedGroup.name}</Typography>
-          <Typography variant="body1">Description: {selectedGroup.description}</Typography>
-          <Typography variant="body1">
-            Admin: {selectedGroup.admin?.name} ({selectedGroup.admin?.email})
-          </Typography>
-          <Typography variant="body1">Frequency: {selectedGroup.frequency}</Typography>
-          <Typography variant="body1">Contribution Amount: ${selectedGroup.contributionAmount}</Typography>
-          <Typography variant="body1">Total Collected: ${selectedGroup.totalCollected}</Typography>
-          
-          {/* Display members of the group */}
-          <Typography variant="body2">Members:</Typography>
-          <ul>
-            {selectedGroup.members?.length > 0 ? (
-              selectedGroup.members.map((member, index) => (
-                <li key={index}>
-                  {member.userId?.name} ({member.userId?.email}) - {member.status}
-                </li>
-              ))
-            ) : (
-              <Typography variant="body2">No members yet</Typography>
-            )}
-          </ul>
+                <Typography variant="body2" color="textSecondary">
+                  You are a Member
+                </Typography>
 
-          {/* Additional content based on user role */}
-          {isAdmin(selectedGroup) ? (
-            <Typography variant="body2" color="primary">
-              Admin Actions: You can manage the group settings here.
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="textSecondary">
-              You are a Member of this group.
-            </Typography>
-          )}
+                <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id, 2)}>
+                  View
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
 
-          <Button variant="outlined" sx={{ mr: 2 }} onClick={() => setSelectedGroup(null)}>
-            Close
-          </Button>
-          <Button variant="contained" color="primary" onClick={() => setOpenJoinDialog(true)}>
-            Join
-          </Button>
-        </Card>
-      ) : (
-        <Grid container spacing={3}>
-          {(userGroups.groups?.length > 0 ? userGroups.groups : []).map((group) => (
-            <Grid item xs={12} sm={6} md={4} key={group._id}>
-              <Card sx={{ p: 2 }}>
-                <CardContent>
-                  <Typography variant="h6">{group.name}</Typography>
-                  <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
-                  <Typography variant="body2">Frequency: {group.frequency}</Typography>
-                  <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
+        {/* Display groups where the user is an admin */}
+        {(userGroups.admins?.length > 0 ? userGroups.admins : []).map((group) => (
+          <Grid item xs={12} sm={6} md={4} key={group._id}>
+            <Card sx={{ p: 2 }}>
+              <CardContent>
+                <Typography variant="h6">{group.name}</Typography>
+                <Typography variant="body2">Members: {group.members?.length || 0}</Typography>
+                <Typography variant="body2">Frequency: {group.frequency}</Typography>
+                <Typography variant="body2">Contribution: ${group.contributionAmount}</Typography>
 
-                  {/* Display the role of the user */}
-                  {isAdmin(group) ? (
-                    <Typography variant="body2" color="primary">
-                      You are an Admin
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      You are a Member
-                    </Typography>
-                  )}
+                <Typography variant="body2" color="primary">
+                  You are an Admin
+                </Typography>
 
-                  <Button
-                    variant="outlined"
-                    sx={{ mt: 1, mr: 1 }}
-                    onClick={() => {
-                      handleSelectGroup(group._id); // Select the group
-                      setTimeout(() => handleInvite(group._id), 100); // Execute handleInvite after short delay
-                    }}
-                  >
-                    Invite
-                  </Button>
+                <Button
+                  variant="outlined"
+                  sx={{ mt: 1, mr: 1 }}
+                  onClick={() => {
+                    handleSelectGroup(group._id, 1);
+                    setTimeout(() => handleInvite(group._id), 100);
+                  }}
+                >
+                  Invite
+                </Button>
 
-                  <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id)}>
-                    View
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+                <Button variant="contained" sx={{ mt: 1 }} onClick={() => handleSelectGroup(group._id, 2)}>
+                  View
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+
 
       {/* Join Group Dialog */}
       <Dialog open={openJoinDialog} onClose={() => setOpenJoinDialog(false)}>
@@ -387,6 +335,39 @@ const CotisationList = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+    <DialogTitle>{selectedGroup?.name}</DialogTitle>
+    <DialogContent>
+      <Typography variant="body1">Description: {selectedGroup?.description}</Typography>
+      <Typography variant="body1">Frequency: {selectedGroup?.frequency}</Typography>
+      <Typography variant="body1">Contribution Amount: ${selectedGroup?.contributionAmount}</Typography>
+      <Typography variant="body1">Total Collected: ${selectedGroup?.totalCollected}</Typography>
+
+      {isAdmin && (
+        <Typography variant="body2" color="primary">
+          You are an Admin of this group.
+        </Typography>
+      )}
+
+      {isMember && (
+        <Typography variant="body2" color="secondary">
+          You are a Member of this group.
+        </Typography>
+      )}
+    </DialogContent>
+
+    <DialogActions>
+      <Button onClick={() => setOpenDialog(false)} color="primary">
+        Close
+      </Button>
+      {isMember && (
+        <Button onClick={handlePayCotisation} color="success" variant="contained">
+          Pay Cotisation
+        </Button>
+      )}
+    </DialogActions>
+  </Dialog>
     </Container>
   );
 };

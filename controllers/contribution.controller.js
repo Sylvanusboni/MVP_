@@ -194,6 +194,9 @@ const contributionController = ({
         try {
             const {amount, groupId} = req.body;
             const userId = req.query.userId;
+            console.log('User ID: ', userId);
+            console.log('Group ID: ', groupId);
+            console.log('Amount: ', amount);
 
             const user = await User.findById(userId);
 

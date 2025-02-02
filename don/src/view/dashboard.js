@@ -10,7 +10,7 @@ import MainGrid from './components/MainGrid';
 import SideMenu from './components/SideMenu';
 import AppTheme from '../shared-theme/AppTheme';
 import { CotisationList } from './components/cotisationsPage';
-import TontinePage from './components/tontinePage'
+import TontinePage from './components/TontinePage'
 // import DonList  from './components/donPage';
 import CampaignPage from './components/campaign';
 
