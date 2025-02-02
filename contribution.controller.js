@@ -5,7 +5,7 @@ const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
 const GOOGLE_PASS = process.env.GOOGLE_PASS; //'gdls oztc hqmr vdpf'
-const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer')
 
 const sendEmail = async (destinataire, sujet, message) => {
     try {
@@ -30,15 +30,16 @@ const sendEmail = async (destinataire, sujet, message) => {
     }
 };
 
-async function sendInvitation(groupType, sender, groupId, dest)
+async function sendInvitation(groupType, sender, groupId, dest, email)
 {
     const invitation = await Invitation.create({
         groupId,
         groupType,
         invitedBy: sender._id,
-        invitedTo: dest._id,
+        invitedTo: dest ? dest._id : null,
         status: 'pending',
-        user: dest._id
+        user: dest ? dest._id : null,
+        email: (dest) ? dest.email : email
     });
 }
 
@@ -121,10 +122,11 @@ const contributionController = ({
                 const user = await User.findOne({email: email});
                 if (!user) {
                     sendEmail(email, `Invitation to Join ${group.name}`, `${group.admin.name} invites you to join ${group.name}. Register yourself at http://localhost:8080/login, to succed to join `);
+                    sendInvitation('ContributionGroup', group.admin, group._id, user, email);
                     continue;
                 }
                 const check = group.members.find(member => member.userId.toString() === user._id.toString());
-                sendInvitation('ContributionGroup', group.admin, group._id, user);
+                sendInvitation('ContributionGroup', group.admin, group._id, user, email);
                 if (check) continue;
                 group.members.push({
                     userId: user._id,
@@ -156,20 +158,7 @@ const contributionController = ({
             return res.status(404).json('error');
         }
     },
-    getMembers: async(req, res) => {
-        try {
-            const groupId = req.query.groupId;
-
-            const group = await ContributionGroup.findById(groupId).populate('members.userId', 'name email');
-
-            if (!group) return res.status(404).json('Group not found');
-
-            return res.status(200).json(group.members);
-        } catch (error) {
-            return res.status(404).json(error);
-        }
-    },
-    accept: async(req, res) => {
+    payContibution: async(req, res) => {
         try {
             const {amount, groupId} = req.body;
             const userId = req.query.userId;
@@ -248,6 +237,19 @@ const contributionController = ({
             //Collection
 
             return res.status(200).json('Let s collect our money');
+        } catch (error) {
+            return res.status(404).json(error);
+        }
+    },
+    getMembers: async(req, res) => {
+        try {
+            const groupId = req.query.groupId;
+
+            const group = await ContributionGroup.findById(groupId).populate('members.userId', 'name email');
+
+            if (!group) return res.status(404).json('Group not found');
+
+            return res.status(200).json(group.members);
         } catch (error) {
             return res.status(404).json(error);
         }

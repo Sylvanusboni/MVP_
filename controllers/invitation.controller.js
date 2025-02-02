@@ -15,7 +15,7 @@ const invitationController = ({
             }
 
             const invitations = await Invitation.find({
-                user: user._id,
+                email: user.email,
                 status: 'pending',
             }).populate('invitedBy', 'name email').populate('groupId', 'name description');
             return res.status(200).json(invitations);

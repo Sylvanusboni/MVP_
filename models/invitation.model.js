@@ -36,6 +36,7 @@ const groupInvitationSchema = new mongoose.Schema({
         required: true,
         ref: 'User',
     },
+    email: String,
     viewed: {
         type: Boolean,
         default: false

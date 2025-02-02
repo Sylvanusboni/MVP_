@@ -178,7 +178,8 @@ const interswitchController = ({
     },
     validatCard: async(req, res) => {
         try {
-            const data = await generateToken();
+            const data = await generateToken(process.env.INTERSWITCH_TRANSFER_CLIENT_ID,
+                process.env.INTERSWITCH_TRANSFER_SECRET_KEY);
             const {accountNumber, bankCode} = req.body;
 
             const accessToken = data.access_token;

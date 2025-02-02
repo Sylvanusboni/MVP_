@@ -31,15 +31,16 @@ const sendEmail = async (destinataire, sujet, message) => {
     }
 };
 
-async function sendInvitation(groupType, sender, groupId, dest)
+async function sendInvitation(groupType, sender, groupId, dest, email)
 {
     const invitation = await Invitation.create({
         groupId,
         groupType,
         invitedBy: sender._id,
-        invitedTo: dest._id,
+        invitedTo: dest ? dest._id : null,
         status: 'pending',
-        user: dest._id
+        user: dest ? dest._id : null,
+        email: (dest) ? dest.email : email
     });
 }
 
@@ -153,6 +154,7 @@ const contributionController = ({
                 const user = await User.findOne({email: email});
                 if (!user) {
                     sendEmail(email, `Invitation to Join ${group.name}`, `${group.admin.name} invites you to join ${group.name}. Register yourself at http://localhost:8080/login, to succed to join `);
+                    sendInvitation('ContributionGroup', group.admin, group._id, user, email);
                     continue;
                 }
                 const check = group.members.find(member => member.userId.toString() === user._id.toString());
