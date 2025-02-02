@@ -55,34 +55,6 @@ export default function TontinePage() {
     }
   };
 
-  // const handlePayTontine = async () => {
-  //   try {
-  //     const response = await getCycle(selectedTontine._id);
-  //     console.log('response', response.data);
-  //     const user = localStorage.getItem('userId');
-  
-  //     // Extract the first cycle's _id
-  //     const cycleId = response.data.length > 0 ? response.data[0]._id : null;
-      
-  //     if (!cycleId) {
-  //       throw new Error('Cycle ID not found');
-  //     }
-  
-  //     const paymentResponse = await axios.post(`${API_BASE_URL}/pay/?userId=${user}`, {
-  //       cycleId: cycleId,
-  //       amount: contributionAmount,
-  //     });
-  //     setOpenPaymentDialog(false);
-  //     localStorage.setItem('amount', paymentResponse.data.amount);
-  //     localStorage.setItem('transactionReference', paymentResponse.data.transactionReference);
-
-  //     console.log('Payment successful:', paymentResponse.data);
-  //     window.location.href = paymentResponse.data.paymentUrl;
-  //   } catch (error) {
-  //     console.error('Error processing payment:', error);
-  //   }
-  // };
-
   const handlePayTontine = async () => {
     try {
       const user = localStorage.getItem("userId");
@@ -323,25 +295,6 @@ export default function TontinePage() {
             </DialogActions>
           </Dialog>
            {/* Payment Dialog */}
-      {/* <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
-        <DialogTitle>Pay Contribution</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Contribution Amount"
-            type="number"
-            value={contributionAmount}
-            onChange={(e) => setContributionAmount(e.target.value)}
-            margin="normal"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenPaymentDialog(false)}>Cancel</Button>
-          <Button onClick={handlePayTontine} variant="contained" disabled={loading}>
-            {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm Payment"}
-          </Button>
-        </DialogActions>
-      </Dialog> */}
       <Dialog open={openPaymentDialog} onClose={() => setOpenPaymentDialog(false)}>
         <DialogTitle>Pay Contribution for Cycle</DialogTitle>
         <DialogContent>
@@ -364,34 +317,6 @@ export default function TontinePage() {
 
       {/* View Tontine Dialog */}
       <Dialog open={Boolean(selectedTontineView)} onClose={handleClose} fullWidth maxWidth="sm">
-        {/* {selectedTontineView && (
-          <>
-            <DialogTitle>{selectedTontineView.name} - Details</DialogTitle>
-            <DialogContent dividers>
-              <Typography variant="body1"><strong>Admin:</strong> {selectedTontineView.admin.name} ({selectedTontineView.admin.email})</Typography>
-              <Typography variant="body1"><strong>Contribution Amount:</strong> {selectedTontineView.contributionAmount}</Typography>
-              <Typography variant="body1"><strong>Cycle Duration:</strong> {selectedTontineView.cycleDuration} days</Typography>
-              <Typography variant="body1"><strong>Start Date:</strong> {new Date(selectedTontineView.startDate).toDateString()}</Typography>
-              <Typography variant="body1"><strong>Total Collected:</strong> {selectedTontineView.totalCollected}</Typography>
-              <Typography variant="body1"><strong>Status:</strong> {selectedTontineView.status}</Typography>
-
-              <Typography variant="h6" sx={{ marginTop: 2 }}>Members</Typography>
-              <List>
-                {selectedTontineView.members.map((member) => (
-                  <ListItem key={member._id}>
-                    <ListItemText
-                      primary={member.userId.name}
-                      secondary={`${member.userId.email} - Status: ${member.status} - Benefited: ${member.benefited ? "Yes" : "No"}`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleClose} variant="contained">Close</Button>
-            </DialogActions>
-          </>
-        )} */}
         <Typography variant="h6" sx={{ marginTop: 2 }}>Cycles</Typography>
           <List>
             {cycles.map((cycle) => (
