@@ -5,13 +5,24 @@ const crypto = require("crypto");
 const router = express.Router();
 // Payment initiation route
 
+function calculateMac(initiatingAmount,
+    initiatingCurrencyCode, initiatingPaymentMethodCode,
+    terminatingAmount, terminatingCurrencyCode,
+    terminatingPaymentMethodCode, terminatingCountryCode) {
+
+  const data = `${initiatingAmount}${initiatingCurrencyCode}${initiatingPaymentMethodCode}${terminatingAmount}${terminatingCurrencyCode}${terminatingPaymentMethodCode}${terminatingCountryCode}`;
+  const mac = crypto.createHash("sha512").update(data).digest("hex");
+  console.log(`mac: ${mac}`);
+  return mac.toString();
+};
+
 function getAuthHeader(clientId, secretKey) {
   return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
 }
 
-async function generateToken() {
-  const clientId = process.env.INTERSWITCH_CLIENT_ID;
-  const secretKey = process.env.INTERSWITCH_SECRET_KEY;
+async function generateToken(cl_id, sc_key) {
+  const clientId = cl_id ? cl_id : process.env.INTERSWITCH_CLIENT_ID;
+  const secretKey = sc_key ? sc_key : process.env.INTERSWITCH_SECRET_KEY;
 
   const headers = {
       'Authorization': getAuthHeader(clientId, secretKey),
@@ -34,6 +45,65 @@ async function generateToken() {
       console.error('Error generating token:', error);
   }
 };
+
+function generateTransferCode() {
+  const timestamp = Date.now(); 
+  const randomPart = Math.floor(Math.random() * 1000000); 
+  return `PSHOP-${timestamp}${randomPart}`;
+}
+
+async function transferFunds(transferDetails) {    
+    const data = await generateToken(process.env.INTERSWITCH_TRANSFER_CLIENT_ID,
+        process.env.INTERSWITCH_TRANSFER_SECRET_KEY);
+
+    const payload = {
+        transferCode: generateTransferCode(),
+        mac: calculateMac(transferDetails.amount.toString(), "566", "CA",  transferDetails.amount.toString(), "566", "AC", "NG"),
+        termination: {
+            amount: transferDetails.amount,
+            accountReceivable: {
+                accountNumber: transferDetails.accountNumber,
+                accountType: transferDetails.accountType || "00",
+            },
+            entityCode: transferDetails.bankCode,
+            currencyCode: "566",
+            paymentMethodCode: "AC",
+            countryCode: "NG",
+        },
+        sender: {
+            phone: transferDetails.senderPhone || "08124888436",
+            email: transferDetails.senderEmail || "dadubiaro@interswitch.com",
+            lastname: transferDetails.senderLastName || "Adubiaro",
+            othernames: transferDetails.senderOtherNames || "Deborah",
+        },
+        initiatingEntityCode: "PBL",
+        initiation: {
+            amount: transferDetails.amount,
+            currencyCode: "566",
+            paymentMethodCode: "CA",
+            channel: "7",
+        },
+        beneficiary: {
+            lastname: transferDetails.beneficiaryLastName || "ralph",
+            othernames: transferDetails.beneficiaryOtherNames || "apho",
+        },
+    };
+
+    const response = await axios.post(
+        "https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/TransferFunds",
+        payload,
+        {
+            headers: {
+                Authorization: `Bearer ${data.access_token}`,
+                "Content-Type": "application/json",
+                accept: "application/json",
+                terminalId: "3PBL",
+            }
+        }
+    );
+
+    return response.data;
+}
 
 router.post("/pay", async (req, res) => {
   try {
@@ -125,70 +195,22 @@ router.post('/transfer', async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Generate authentication parameters
-    const transferCode = `TX-${Date.now()}`;
-    const timestamp = Date.now();
-    const nonce = crypto.randomBytes(16).toString('hex');
-
-    console.log ('Setting up payload for transfer request to Interswitch');
-
-    const payload = {
-      mac: '<computed_mac>',
-      beneficiary: { lastname, othernames },
-      initiatingEntityCode: 'DMO',
-      initiation: {
-        amount: String(amount),
-        channel: 7,
-        currencyCode: 'NG',
-        paymentMethodCode: 'CA',
-      },
-      sender: {
-        email: user.email,
-        lastname: 'Oyelayo',
-        othernames: 'Toyosi',
-        phone: '0732246413',
-      },
-      termination: {
-        accountReceivable: { accountNumber, accountType },
-        amount,
-        countryCode: 'NG',
-        currencyCode: 566,
-        entityCode: '058',
-        paymentMethodCode: 'AC',
-      },
+    const transferCode = generateTransferCode();
+    const response = await transferFunds({
+      amount,
+      accountNumber,
+      accountType,
+      lastname,
+      othernames,
       transferCode,
-    };
-
-    // Convert payload to JSON string
-    const params = JSON.stringify(payload);
-
-    // const data = await generateToken();
-    // const merchantCode = data.merchant_code;
-    // const paymentItemId = process.env.INTERSWITCH_PAY_ITEM_ID;
-
-    const headers = {
-      Authorization: `InterswitchAuth ${Buffer.from(process.env.INTERSWITCH_CLIENT_ID).toString('base64')}`,
-      'Content-Type': 'application/json',
-      'Signature': '<COMPUTED_SIGNATURE>',
-      'Timestamp': timestamp,
-      'Nonce': nonce,
-      'TerminalID': '<TERMINAL_ID>',
-      'SignatureMethod': 'SHA1',
-    };
-
-    console.log('Headers:', headers);
-    console.log('Payload:', params);
-
-    console.log('Sending transfer request to Interswitch');
-
-    // Send transfer request to Interswitch
-    const response = await axios.post(
-      'https://sandbox.interswitchng.com/api/v2/quickteller/payments/transfers',
-      params,
-      { headers,
-        timeout: 10000,
-       }
-    );
+      bankCode,
+      senderEmail,
+      senderLastName,
+      senderPhone,
+      senderOtherNames,
+      beneficiaryLastName,
+      beneficiaryOtherNames
+    });
 
     // Save transaction to MongoDB
     const newTransfer = new Transfer({
@@ -202,17 +224,41 @@ router.post('/transfer', async (req, res) => {
     });
 
     await newTransfer.save();
-
-    res.status(200).json({ success: true, message: 'Transfer initiated', data: response.data });
-
+    res.status(200).json({ success: true, message: 'Transfer initiated', data: response });
   } catch (error) {
     console.error('Transfer Error:', error.response?.data || error.message);
-    res.status(500).json({
+    res.status(404).json({
       success: false,
       message: 'Transfer failed',
       error: error.response?.data || error.message,
     });
   }
 });
+
+router.post('/validate', async (req, res) => {
+    try {
+        const data = await generateToken(process.env.INTERSWITCH_TRANSFER_CLIENT_ID,
+            process.env.INTERSWITCH_TRANSFER_SECRET_KEY);
+        const {accountNumber, bankCode} = req.body;
+
+        const accessToken = data.access_token;
+
+        const response = await axios.get(
+        `https://qa.interswitchng.com/quicktellerservice/api/v5/transactions/DoAccountNameInquiry`, //?accountNumber=${accountNumber}&bankCode=${bankCode}
+        {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                TerminalId: '3PBL0001',
+                bankCode: bankCode,
+                accountId: accountNumber,
+                'Content-Type': 'application/json'
+            },
+        });
+        return res.status(200).json(response.data);
+    } catch (error) {
+      console.log("Erreur lors de la validation du compte :", error);
+      return res.status(404).json(error);
+    }
+})
 
 module.exports = router;

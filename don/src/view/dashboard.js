@@ -10,7 +10,7 @@ import MainGrid from './components/MainGrid';
 import SideMenu from './components/SideMenu';
 import AppTheme from '../shared-theme/AppTheme';
 import { CotisationList } from './components/cotisationsPage';
-import TontineList from './components/TontinePage';
+import TontinePage from './components/tontinePage'
 // import DonList  from './components/donPage';
 import CampaignPage from './components/campaign';
 
@@ -39,7 +39,7 @@ export default function Dashboard(props) {
       case '/cotisations':
         return <CotisationList />;
       case '/tontines':
-        return <TontineList />;
+        return <TontinePage />;
       default:
         return <MainGrid />;
     }
