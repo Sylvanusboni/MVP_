@@ -7,6 +7,7 @@ const API_BASE_URL = "http://localhost:8080/api/contribution";
 const CotisationList = () => {
   const [userGroups, setUserGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedTontine, setSelectedTontine] = useState(null);
   const [openInviteDialog, setOpenInviteDialog] = useState(false);
   const [openJoinDialog, setOpenJoinDialog] = useState(false);
   const [loading, setLoading] = useState(false);

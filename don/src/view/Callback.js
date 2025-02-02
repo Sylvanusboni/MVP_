@@ -26,6 +26,7 @@ const PaymentCallback = () => {
         });
 
         const data = await response.json();
+        console.log("Payment verification response:", data);
 
         if (response.ok) {
             localStorage.removeItem("transactionReference");

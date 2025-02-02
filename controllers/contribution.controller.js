@@ -5,7 +5,8 @@ const Invitation = require('../models/invitation.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
 const GOOGLE_PASS = process.env.GOOGLE_PASS; //'gdls oztc hqmr vdpf'
-const nodemailer = require('nodemailer')
+const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 const sendEmail = async (destinataire, sujet, message) => {
     try {
@@ -41,6 +42,37 @@ async function sendInvitation(groupType, sender, groupId, dest)
         user: dest._id
     });
 }
+
+function getAuthHeader(clientId, secretKey) {
+    return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
+}
+
+async function generateToken(cl_id, sc_key) {
+    const clientId = cl_id || process.env.INTERSWITCH_CLIENT_ID;
+    const secretKey = sc_key || process.env.INTERSWITCH_SECRET_KEY;
+
+    const headers = {
+        'Authorization': getAuthHeader(clientId, secretKey),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'accept': 'application/json'
+    };
+
+    try {
+        // 'https://sandbox.interswitchng.com/passport/oauth/token?env=test',
+        const response = await axios.post(
+            'https://passport.k8.isw.la/passport/oauth/token?grant_type=client_credentials',
+            'grant_type=client_credentials',
+            {
+                headers
+            }
+        );
+        console.log(response.data);
+        return response.data;
+    } catch (error) {
+        console.log(error);
+        console.error('Error generating token:', error);
+    }
+};
 
 const contributionController = ({
     createGroup: async(req, res) => {
@@ -207,7 +239,7 @@ const contributionController = ({
             });
             
             await newContribution.save();
-            await campaign.save();
+            //await campaign.save();
             return res.status(200).json(response.data);
         } catch (error) {
             return res.status(404).json(error);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import {  Container, Typography, Button, Card, CardContent, Grid, Dialog, DialogActions, DialogContent, DialogTitle, TextField, CircularProgress,
+import {  Container, Typography, Button, Card, CardContent, Grid, Dialog, DialogActions, DialogContent, DialogTitle, TextField, CircularProgress, List, ListItem, ListItemText,
 } from "@mui/material";
 import { getUserTontine, createTontine, startTontine, collectTontine, getCycle} from "./services/tontineService";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
@@ -12,6 +12,7 @@ export default function TontinePage() {
   const [tontines, setTontines] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [selectedTontine, setSelectedTontine] = useState(null);
+  const [selectedTontineView, setSelectedTontineView] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,23 +46,30 @@ export default function TontinePage() {
   const handlePayTontine = async () => {
     try {
       const response = await getCycle(selectedTontine._id);
-      const cycleId = response.data.cycleId;
+      console.log('response', response.data);
+      const user = localStorage.getItem('userId');
+  
+      // Extract the first cycle's _id
+      const cycleId = response.data.length > 0 ? response.data[0]._id : null;
       
       if (!cycleId) {
         throw new Error('Cycle ID not found');
       }
-      
-      const paymentResponse = await axios.post(`${API_BASE_URL}/pay-tontine`, {
+  
+      const paymentResponse = await axios.post(`${API_BASE_URL}/pay/?userId=${user}`, {
         cycleId: cycleId,
         amount: contributionAmount,
       });
+      setOpenPaymentDialog(false);
+      localStorage.setItem('amount', paymentResponse.data.amount);
+      localStorage.setItem('transactionReference', paymentResponse.data.transactionReference);
       
       console.log('Payment successful:', paymentResponse.data);
+      window.location.href = paymentResponse.data.paymentUrl;
     } catch (error) {
       console.error('Error processing payment:', error);
     }
   };
-
 
   const handleCreateTontine = async () => {
     try {
@@ -121,6 +129,14 @@ export default function TontinePage() {
       console.error("Error collecting Tontine funds:", error);
     }
   };
+  
+  const handleViewClick = (tontine) => {
+    setSelectedTontineView(tontine);
+  };
+
+  const handleClose = () => {
+    setSelectedTontineView(null);
+  };
 
   return (
     <Container>
@@ -174,7 +190,7 @@ export default function TontinePage() {
                   <Typography variant="body2">Total Collected: ${tontine.totalCollected}</Typography>
                 )}
 
-                <Button variant="outlined" onClick={() => setSelectedTontine(tontine)} sx={{ mt: 1 }}>
+                <Button variant="outlined"  onClick={() => handleViewClick(tontine)} sx={{ mt: 1 }}>
                   View
                 </Button>
 
@@ -289,6 +305,37 @@ export default function TontinePage() {
             {loading ? <CircularProgress size={24} color="inherit" /> : "Confirm Payment"}
           </Button>
         </DialogActions>
+      </Dialog>
+      {/* View Tontine Dialog */}
+      <Dialog open={Boolean(selectedTontineView)} onClose={handleClose} fullWidth maxWidth="sm">
+        {selectedTontineView && (
+          <>
+            <DialogTitle>{selectedTontineView.name} - Details</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body1"><strong>Admin:</strong> {selectedTontineView.admin.name} ({selectedTontineView.admin.email})</Typography>
+              <Typography variant="body1"><strong>Contribution Amount:</strong> {selectedTontineView.contributionAmount}</Typography>
+              <Typography variant="body1"><strong>Cycle Duration:</strong> {selectedTontineView.cycleDuration} days</Typography>
+              <Typography variant="body1"><strong>Start Date:</strong> {new Date(selectedTontineView.startDate).toDateString()}</Typography>
+              <Typography variant="body1"><strong>Total Collected:</strong> {selectedTontineView.totalCollected}</Typography>
+              <Typography variant="body1"><strong>Status:</strong> {selectedTontineView.status}</Typography>
+
+              <Typography variant="h6" sx={{ marginTop: 2 }}>Members</Typography>
+              <List>
+                {selectedTontineView.members.map((member) => (
+                  <ListItem key={member._id}>
+                    <ListItemText
+                      primary={member.userId.name}
+                      secondary={`${member.userId.email} - Status: ${member.status} - Benefited: ${member.benefited ? "Yes" : "No"}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleClose} variant="contained">Close</Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </Container>
   );

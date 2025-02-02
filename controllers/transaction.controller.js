@@ -40,7 +40,7 @@ const transactionController = ({
     complete: async(req, res) => {
         try {
             const {transactionReference, email, userId} = req.body;
-            const amount = parseInt(req.body.amount);
+            const amount = parseInt(req.body.amount) / 100;
 
             if (!transactionReference || !amount) {
                 return res.status(404).json('Need Trans Reference and Amount to confirm');
@@ -103,7 +103,9 @@ const transactionController = ({
                     const cycle = await TontineCycle.findById(transaction.tontineCycle);
                     if (!cycle)
                         return res.status(404).json('Unexisting Cycle');
-                    const _member = cycle.members.find(it => it.userId.toString() === userId);
+                    console.log('Cycle:', cycle);
+                    console.log('User', userId);
+                    const _member = cycle.members.find(it => it.userId.toString() === transaction.user.toString());
                     if (!_member)
                         return res.status(404).json('Member not registered in this Tontine');
                     _member.payed += amount;

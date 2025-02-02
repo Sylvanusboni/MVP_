@@ -15,7 +15,7 @@ export const createTontine = async (tontineData) => {
 
 // Start a Tontine cycle
 export const startTontine = async (tontineId) => {
-  return axios.post(`${API_BASE_URL}/start/${tontineId}`);
+  return axios.post(`${API_BASE_URL}/start/${tontineId}/?userId=${user}`);
 };
 
 // Invite members

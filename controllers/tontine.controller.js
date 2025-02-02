@@ -6,6 +6,7 @@ const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
 const GOOGLE_PASS = process.env.GOOGLE_PASS;
 const nodemailer = require('nodemailer')
+const axios = require('axios');
 
 const sendEmail = async (destinataire, sujet, message) => {
     try {
@@ -41,6 +42,10 @@ async function sendInvitation(groupType, sender, groupId, dest)
         user: dest._id
     });
     //Handle Expiry Date
+}
+
+function getAuthHeader(clientId, secretKey) {
+    return `Basic ${Buffer.from(`${clientId}:${secretKey}`).toString('base64')}`;
 }
 
 async function generateToken() {
@@ -262,7 +267,7 @@ const TontineController = ({
                 return res.status(404).json('Set Ids');
             }
             if (req.query.tontineId) {
-                const tontine = await TontineController.findById(req.query.tontineId);
+                const tontine = await TontineGroup.findById(req.query.tontineId);
                 if (!tontine) {
                     return res.status(404).json('Undefined Tontine');
                 }
@@ -364,11 +369,13 @@ const TontineController = ({
             }
 
             const cycle = await TontineCycle.findById(cycleId);
+            console.log("Cycle:", cycle);
             if (!cycle) {
                 return res.status(404).json('Unknown Cycle');
             }
 
             const member = cycle.members.find(it => it.userId.toString() === user._id.toString());
+            console.log("Member: ", member);
             if (!member) {
                 return res.status(404).json('He is not in this tontine');
             }
@@ -408,10 +415,11 @@ const TontineController = ({
             });
             
             await newContribution.save();
-            await campaign.save();
+            // await tontine.save();
             return res.status(200).json(response.data);
         } catch (error) {
-            return res.status(404).json('Payment')
+            console.log(error);
+            return res.status(404).json('Payment Error')
         }
     }
 });
