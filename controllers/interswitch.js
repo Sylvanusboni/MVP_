@@ -3,6 +3,7 @@ const TontineCycle = require('../models/Tontine/cycle.model');
 const TontineGroup = require('../models/Tontine/group.model');
 const ContributionGroup = require('../models/Contribution/group.model');
 const Transaction = require('../models/transaction.model');
+const Campaign = require('../models/campaign.model');
 
 const baseURL = process.env.INTERSWITCH_BASE_URL;
 const clientId = process.env.INTERSWITCH_CLIENT_ID;
@@ -345,6 +346,61 @@ const interswitchController = ({
                 cycle.totalCollected -= amount;
                 await cycle.save();
                 return res.status(200).json("Funds transfered");
+            }
+            return res.status(404).json('Transfer Error');
+        } catch(error) {
+            return res.status(404).json(error);
+        }
+    },
+    collectCampaignFunds: async(req, res) => {
+        try {
+            const userId = req.query.userId;
+            const campaignId = req.body.campaignId;
+
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json('Unknown User');
+            }
+
+            const {accountNumber, bankCode, amount} = req.body;
+            if (!accountNumber || !bankCode || !amount)
+                return res.status(404).json('Need this informations');
+
+            const campaign = await Campaign.findById(campaignId).populate('admin');
+            if (!campaign) {
+                return res.status(404).json('Unknown Contribution');
+            }
+
+            if (campaign.admin.toString() !== user._id.toString()) {
+                return res.status(403).json('Unauthorized! Only Admin can collect');
+            }
+
+            if (amount > campaign.totalCollected)
+                return res.status(404).json('Unsuffiscient sold');
+
+            const data = await transferFunds({
+                amount,
+                accountNumber,
+                bankCode,
+                senderEmail: campaign.admin.email,
+                senderPhone: campaign.admin.phone,
+                senderLastName: campaign.admin.name,
+                senderOtherNames: campaign.admin.name,
+                beneficiaryLastName: user.name,
+                beneficiaryOtherNames: user.name
+            });
+
+            if (data.ResponseCode === "90000") {
+                const transaction = await Transaction.create({
+                    amount,
+                    transactionReference: data.transactionReference,
+                    campaignId,
+                    user: user._id
+                });
+
+                campaign.totalCollected -= amount;
+                await campaign.save();
+                return res.status(200).json("Funds Collected");
             }
             return res.status(404).json('Transfer Error');
         } catch(error) {
