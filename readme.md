@@ -1,80 +1,114 @@
-# WeShare - Plateforme de Dons et de Tontines
+WeShare - Donation and Tontine Platform
 
-## 📌 Description
-WeShare est une plateforme innovante qui modernise la solidarité et l'épargne communautaire en Afrique. Elle combine deux aspects essentiels de la finance sociale :
-- **Un espace de dons solidaires** permettant aux ONG et associations de collecter des fonds en toute transparence.
-- **Un système de tontines digitales** pour faciliter l'épargne collective de manière sécurisée et automatisée.
+📌 Description
 
-## 🎯 Objectifs
-- Faciliter la collecte de fonds pour des causes sociales.
-- Digitaliser et sécuriser les pratiques d'épargne communautaire.
-- Offrir une transparence totale dans la gestion des fonds.
+WeShare is an innovative platform that modernizes solidarity and community savings in Africa. It combines two essential aspects of social finance:
 
-## 🚀 Fonctionnalités principales
-### 1️⃣ Espace Dons et Solidarité
-- Création et gestion de campagnes de collecte de fonds.
-- Tableau de bord pour suivre les dons et leur impact.
-- Système de paiement sécurisé via **Interswitch IPG API**.
+A donation space allowing NGOs and associations to raise funds transparently.
 
-### 2️⃣ Espace Tontines Numériques
-- Création et gestion de tontines avec règles personnalisées.
-- Gestion automatique des paiements et des tours de redistribution.
-- Notifications et suivi en temps réel.
+A digital tontine system to facilitate collective savings in a secure and automated manner.
 
-### 3️⃣ Sécurité et Paiements
-- **Vérification des comptes** via **Interswitch VAS API**.
-- Transactions sécurisées et multiples méthodes de paiement.
-- Authentification forte et gestion des accès.
+🎯 Objectives
 
-## 🏗️ Architecture
-- **Frontend** : React.js
-- **Backend** : Django (REST API)
-- **Base de données** : MongoDB
-- **APIs utilisées** : Interswitch IPG & VAS
+Facilitate fundraising for social causes.
 
-## ⚙️ Installation et Lancement
-### 📥 Prérequis
-- Node.js & npm (pour le frontend)
-- Python & Django (pour le backend)
-- MongoDB (pour la base de données)
+Digitize and secure community savings practices.
 
-### 🚀 Installation
-1. **Cloner le projet**
-   ```bash
-   git clone https://github.com/votre-repo/WeShare.git
-   cd WeShare
-   ```
+Provide total transparency in fund management.
 
-2. **Backend : Installation des dépendances et lancement**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   python manage.py migrate
-   python manage.py runserver
-   ```
+🚀 Key Features
 
-3. **Frontend : Installation et lancement**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+1️⃣ Donation & Solidarity Space
 
-## 🔗 Intégration des APIs Interswitch
-- **IPG (Interswitch Payment Gateway)** : Gestion des paiements et dons.
-- **VAS (Value-Added Services)** : Vérification des comptes et transactions.
+Create and manage fundraising campaigns.
 
-## 📊 Suivi et Reporting
-- Tableaux de bord personnalisés avec statistiques détaillées.
-- Suivi des dons et contributions en temps réel.
-- Exportation des rapports pour la transparence.
+Dashboard to track donations and their impact.
 
-## 📅 Prochaines Étapes
-- 🚧 Intégration complète des APIs d'Interswitch.
-- 📱 Développement d'une application mobile.
-- 🔍 Tests de sécurité et optimisation des performances.
+Secure payment system via Interswitch IPG API.
 
-## 📢 Équipe de Développement
-- **Chef de Projet** : Hermann
-- **Développeurs Frontend** : Sayane, Hermann
-- **Développeurs Backend** : Sylvanus, Owens, Saoban# WeShare - Plateforme de Dons et de Tontines
+2️⃣ Digital Tontine Space
+
+Create and manage tontines with customized rules.
+
+Automated payment and redistribution management.
+
+Real-time notifications and tracking.
+
+3️⃣ Security & Payments
+
+Account verification via Interswitch VAS API.
+
+Secure transactions with multiple payment methods.
+
+Strong authentication and access management.
+
+🏷️ Architecture
+
+Frontend: React.js
+
+Backend: Django (REST API)
+
+Database: MongoDB
+
+APIs Used: Interswitch IPG & VAS
+
+⚙️ Installation & Launch
+
+📅 Prerequisites
+
+Node.js & npm (for frontend)
+
+Python & Django (for backend)
+
+MongoDB (for database)
+
+🚀 Installation
+
+Clone the project
+
+git clone https://github.com/your-repo/WeShare.git
+cd WeShare
+
+Backend: Install dependencies and run
+
+cd backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+
+Frontend: Install and run
+
+cd frontend
+npm install
+npm start
+
+🔗 Interswitch API Integration
+
+IPG (Interswitch Payment Gateway): Manages payments and donations.
+
+VAS (Value-Added Services): Handles account verification and transactions.
+
+📊 Tracking & Reporting
+
+Customized dashboards with detailed statistics.
+
+Real-time tracking of donations and contributions.
+
+Exportable reports for transparency.
+
+🗓 Next Steps
+
+🛠️ Full integration of Interswitch APIs.
+
+📱 Development of a mobile application.
+
+🔍 Security testing and performance optimization.
+
+📢 Development Team
+
+Project Manager: Hermann
+
+Frontend Developers: Sayane, Hermann
+
+Backend Developers: Sylvanus, Saoban, Owens
+
