@@ -46,6 +46,8 @@ export const payTontine = async (tontineId, amount) => {
 };
 
 // Collect Tontine funds
-export const collectTontine = async (tontineId) => {
-  return axios.post(`${API_BASE_URL}/collect`, { tontineId });
+export const collectTontine = async (tontineId, amount, accountType, accountNumber, bankCode) => {
+  const response = await getCycle(tontineId);
+  console.log('Tontine Cycles:', response.data[0]._id);
+  return axios.post(`${API_BASE_URL}/collect/?userId=${user}`, { cycleId: response.data[0]._id , amount, accountType, accountNumber, bankCode });
 };

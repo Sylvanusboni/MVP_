@@ -29,6 +29,12 @@ export default function TontinePage() {
   const [contributionAmount, setContributionAmount] = useState("");
   const [cycles, setCycles] = useState([]);
   const [selectedCycleId, setSelectedCycleId] = useState(null);
+  const [amount, setAmount] = useState("");
+  const user = localStorage.getItem("userId");
+  const [openCollect, setOpenCollect] = useState(false);
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [accountType, setAccountType] = useState("");
 
   const fetchCycles = async (tontineId) => {
     try {
@@ -128,9 +134,11 @@ export default function TontinePage() {
   };
 
 
-  const handleCollectTontine = async (tontineId) => {
+  const handleCollectTontine = async () => {
+    console.log('Collecting Tontine funds...');
     try {
-      await collectTontine(tontineId);
+
+      await collectTontine(selectedTontine._id, amount, accountType, accountNumber, bankCode);
       loadTontines();
     } catch (error) {
       console.error("Error collecting Tontine funds:", error);
@@ -220,7 +228,11 @@ export default function TontinePage() {
                 )}
 
                 {admins.length > 0 && (
-                  <Button variant="contained" color="error" onClick={() => collectTontine(tontine._id)} sx={{ ml: 1, mt: 1 }}>
+                  <Button variant="contained" color="error" onClick={() => {
+                    setOpenCollect(true);
+                    setSelectedTontine(tontine);
+                }}
+                 sx={{ ml: 1, mt: 1 }}>
                     Collect Funds
                   </Button>
                 )}
@@ -354,6 +366,52 @@ export default function TontinePage() {
           </List>
 
       </Dialog>
+      {/* Collect Funds Dialog */}
+            <Dialog open={openCollect} onClose={() => setOpenCollect(false)}>
+              <DialogTitle>Collect Funds</DialogTitle>
+              <DialogContent>
+                <TextField
+                  label="Account Number"
+                  type="text"
+                  fullWidth
+                  margin="dense"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                />
+                <TextField
+                  label="Bank Code"
+                  type="text"
+                  fullWidth
+                  margin="dense"
+                  value={bankCode}
+                  onChange={(e) => setBankCode(e.target.value)}
+                />
+                <TextField
+                  label="Amount"
+                  type="number"
+                  fullWidth
+                  margin="dense"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                <TextField
+                  label="Account Type"
+                  type="text"
+                  fullWidth
+                  margin="dense"
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpenCollect(false)} color="secondary">
+                  Cancel
+                </Button>
+                <Button onClick={handleCollectTontine} variant="contained" color="primary" disabled={loading}>
+                  {loading ? "Processing..." : "Collect"}
+                </Button>
+              </DialogActions>
+            </Dialog>
     </Container>
   );
 }

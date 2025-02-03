@@ -25,7 +25,7 @@ const ExpandMore = styled((props) => {
   transform: expand ? "rotate(180deg)" : "rotate(0deg)",
 }));
 
- function CampaignCard({ campaign }) {
+ function CampaignCard({ campaign, isTabOne}) {
   console.log('Campaign contributors:', campaign.contributors);
   const [expanded, setExpanded] = useState(false);
   const [shareLink, setShareLink] = useState("");
@@ -34,7 +34,10 @@ const ExpandMore = styled((props) => {
   const [amount, setAmount] = useState("");
   const user = localStorage.getItem("userId");
   const [loading, setLoading] = useState(false);
-
+  const [openCollect, setOpenCollect] = useState(false);
+  const [accountNumber, setAccountNumber] = useState("");
+  const [bankCode, setBankCode] = useState("");
+  const [accountType, setAccountType] = useState("");
 
   const handleDonateClick = () => {
     setOpenDonate(true);
@@ -55,38 +58,44 @@ const ExpandMore = styled((props) => {
     setExpanded(!expanded);
   };
 
-//   const handleDonate = async () => {
-//     if (!amount || amount <= 0) {
-//       alert("Please enter a valid amount.");
-//       return;
-//     }
-  
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/donate/?userId=${user}`, {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//         body: JSON.stringify({
-//           campaignId: campaign._id,
-//           amount: amount,
-//         }),
-//       });
-  
-//       const data = await response.json();
-  
-//       if (response.ok) {
-//         alert("Donation successful!");
-//         setOpen(false);
-//       } else {
-//         alert(`Error: ${data.message || "Failed to donate"}`);
-//       }
-//     } catch (error) {
-//       console.error("Error donating:", error);
-//       alert("An error occurred while processing your donation.");
-//     }
-//   };
-  
+  const handleCollectFunds = async () => {
+    if (!accountNumber || !bankCode || !amount  || !accountType) {
+      alert("Please provide all required fields.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/collect/?userId=${user}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignId: campaign._id,
+          accountNumber,
+          bankCode,
+          amount,
+          accountType,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Funds collected successfully!");
+        setOpenCollect(false);
+      } else {
+        alert(`Error: ${data.message || "Failed to collect funds"}`);
+      }
+    } catch (error) {
+      console.error("Error collecting funds:", error);
+      alert("An error occurred while processing your request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 const handleDonate = async () => {
     if (!amount || amount <= 0) {
       alert("Please enter a valid amount.");
@@ -123,7 +132,7 @@ const handleDonate = async () => {
       console.error("Error during donation initiation:", error);
       alert("An error occurred while processing your donation.");
     }
-  };
+};
 
   // Function to format large numbers
   const formatNumber = (num) => {
@@ -172,6 +181,11 @@ const handleDonate = async () => {
         <IconButton aria-label="share" onClick={handleShare}>
           <ShareIcon />
         </IconButton>
+        {isTabOne && (
+          <Button variant="contained" color="primary" onClick={() => setOpenCollect(true)}>
+            Collect Funds
+          </Button>
+        )}
         </Box>
         <ExpandMore
           expand={expanded}
@@ -181,6 +195,7 @@ const handleDonate = async () => {
         >
           <ExpandMoreIcon />
         </ExpandMore>
+        
       </CardActions>
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <CardContent>
@@ -258,7 +273,52 @@ const handleDonate = async () => {
             </Button>
         </DialogActions>
         </Dialog>
-
+        {/* Collect Funds Dialog */}
+      <Dialog open={openCollect} onClose={() => setOpenCollect(false)}>
+        <DialogTitle>Collect Funds</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Account Number"
+            type="text"
+            fullWidth
+            margin="dense"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+          />
+          <TextField
+            label="Bank Code"
+            type="text"
+            fullWidth
+            margin="dense"
+            value={bankCode}
+            onChange={(e) => setBankCode(e.target.value)}
+          />
+          <TextField
+            label="Amount"
+            type="number"
+            fullWidth
+            margin="dense"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <TextField
+            label="Account Type"
+            type="text"
+            fullWidth
+            margin="dense"
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCollect(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleCollectFunds} variant="contained" color="primary" disabled={loading}>
+            {loading ? "Processing..." : "Collect"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }
@@ -322,6 +382,7 @@ export default function CampaignPage() {
     }
   };
 
+  const isTabOne = tab === 1;
   const campaignsToDisplay = tab === 0 ? campaigns : userCampaigns;
 
   return (
@@ -350,7 +411,7 @@ export default function CampaignPage() {
           <Grid container spacing={3}>
             {(campaignsToDisplay || []).map((campaign) => (
               <Grid item xs={12} sm={6} md={4} key={campaign._id}>
-                <CampaignCard campaign={campaign} />
+                <CampaignCard campaign={campaign} isTabOne={isTabOne} />
               </Grid>
             ))}
           </Grid>

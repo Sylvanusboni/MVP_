@@ -13,6 +13,7 @@ import { CotisationList } from './components/cotisationsPage';
 import TontinePage from './components/TontinePage'
 // import DonList  from './components/donPage';
 import CampaignPage from './components/campaign';
+import TransactionTable from './Transactions';
 
 import {
   chartsCustomizations,
@@ -40,6 +41,8 @@ export default function Dashboard(props) {
         return <CotisationList />;
       case '/tontines':
         return <TontinePage />;
+      case '/transactions':
+        return <TransactionTable />;
       default:
         return <MainGrid />;
     }

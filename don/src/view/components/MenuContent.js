@@ -40,6 +40,8 @@ export default function MenuContent() {
         return 2;
       case '/tontines':
         return 3;
+      case '/transactions':
+        return 5;
       default:
         return 0;
     }
@@ -60,7 +62,7 @@ export default function MenuContent() {
       <List dense>
         {secondaryListItems.map((item, index) => (
           <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton>
+            <ListItemButton selected={index === getIndex()}  onClick={() => navigate(item.route)}>
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>

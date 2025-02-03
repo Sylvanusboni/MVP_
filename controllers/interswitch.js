@@ -251,8 +251,9 @@ const interswitchController = ({
                 return res.status(404).json('Unknown User');
             }
 
-            const {accountNumber, bankCode, amount} = req.body;
-            if (!accountNumber || !bankCode || !amount)
+            const amount = parseInt(req.body.amount);
+            const {accountNumber, bankCode, accountType} = req.body;
+            if (!accountNumber || !bankCode || !amount )
                 return res.status(404).json('Need this informations');
 
             const contribution = await ContributionGroup.findById(groupId).populate('admin');
@@ -271,6 +272,7 @@ const interswitchController = ({
                 amount,
                 accountNumber,
                 bankCode,
+                accountType,
                 senderEmail: contribution.admin.email,
                 senderPhone: contribution.admin.phone,
                 senderLastName: contribution.admin.name,
@@ -307,6 +309,10 @@ const interswitchController = ({
                 return res.status(404).json('Unknown User');
             }
 
+            const {accountNumber, bankCode, accountType} = req.body;
+            if (!accountNumber || !bankCode || !amount)
+                return res.status(404).json('Need this informations');
+
             const cycle = await TontineCycle.findById(cycleId);
             if (!cycle)
                 return res.status(404).json('Unknown Cycle');
@@ -315,7 +321,7 @@ const interswitchController = ({
             if (!tontine)
                 return res.status(404).json('Without Admin we can t do anything');
 
-
+            console.log(cycle.beneficiary.toString(), user._id.toString());
             if (cycle.beneficiary.toString() !== user._id.toString())
                 return res.status(403).json('Unauthorized! You aint this cycle beneficiary');
 
@@ -326,6 +332,7 @@ const interswitchController = ({
                 amount,
                 accountNumber,
                 bankCode,
+                accountType,
                 senderEmail: tontine.admin.email,
                 senderPhone: tontine.admin.phone,
                 senderLastName: tontine.admin.name,
@@ -353,39 +360,52 @@ const interswitchController = ({
         }
     },
     collectCampaignFunds: async(req, res) => {
+        console.log('Collecting funds');
         try {
             const userId = req.query.userId;
             const campaignId = req.body.campaignId;
+            console.log('Campaign ID:', campaignId);
+            console.log('User ID:', userId);
 
             const user = await User.findById(userId);
             if (!user) {
                 return res.status(404).json('Unknown User');
             }
+            console.log('checking user ...');
 
-            const {accountNumber, bankCode, amount} = req.body;
+            const {accountNumber, bankCode, amount, accountType} = req.body;
             if (!accountNumber || !bankCode || !amount)
                 return res.status(404).json('Need this informations');
-
-            const campaign = await Campaign.findById(campaignId).populate('admin');
+            console.log('Checking account number ...');
+            const campaign = await Campaign.findById(campaignId).populate('createdBy');
             if (!campaign) {
+                console.log('Campaign not found');
                 return res.status(404).json('Unknown Contribution');
             }
+            console.log('Checking admin ...');
 
-            if (campaign.admin.toString() !== user._id.toString()) {
+            if (campaign.createdBy._id.toString() !== user._id.toString()) {
+                console.log('Unauthorized');
                 return res.status(403).json('Unauthorized! Only Admin can collect');
             }
+            console.log('Checking amount ...');
 
-            if (amount > campaign.totalCollected)
+            if (amount > campaign.totalCollected) {
+                console.log('Unsuffiscient sold');
                 return res.status(404).json('Unsuffiscient sold');
+            }
+
+            console.log('Transferring funds ...');
 
             const data = await transferFunds({
                 amount,
                 accountNumber,
                 bankCode,
-                senderEmail: campaign.admin.email,
-                senderPhone: campaign.admin.phone,
-                senderLastName: campaign.admin.name,
-                senderOtherNames: campaign.admin.name,
+                accountType,
+                senderEmail: campaign.createdBy.email,
+                senderPhone: campaign.createdBy.phone,
+                senderLastName: campaign.createdBy.name,
+                senderOtherNames: campaign.createdBy.name,
                 beneficiaryLastName: user.name,
                 beneficiaryOtherNames: user.name
             });
@@ -468,7 +488,7 @@ async function transferFunds(transferDetails) {
             amount: transferDetails.amount,
             accountReceivable: {
                 accountNumber: transferDetails.accountNumber,
-                accountType: "00",
+                accountType: transferDetails.accountType || "00",
             },
             entityCode: transferDetails.bankCode,
             currencyCode: "566",

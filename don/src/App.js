@@ -13,6 +13,7 @@ function App() {
     <Route path="/dons" element={< Dashboard/>} />
     <Route path="/cotisations" element={< Dashboard/>} />
     <Route path="/tontines" element={< Dashboard/>} />
+    <Route path="/transactions" element={< Dashboard/>} />
     <Route path="/donate/:campaignId" element={<DonateForm />} />
     <Route path="/api/interswitch/callback" element={<PaymentCallback />} />
     </Routes>
