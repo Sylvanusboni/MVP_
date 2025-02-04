@@ -133,7 +133,7 @@ const TontineController = ({
     },
     start: async(req, res) => {
         try {
-            const {tontineId} = req.params;
+            const {tontineId} = req.params.tontineId;
             console.log(tontineId);
 
             const tontine = await TontineGroup.findById(tontineId);
@@ -149,7 +149,13 @@ const TontineController = ({
 
             const startDate = new Date(tontine.startDate);
             const cycleDuration = tontine.cycleDuration;
-            const members = tontine.members;
+            let members = tontine.members;
+
+            members = members.filter(it => it.status === 'accepted');
+
+            if (members.length < 2) {
+                return res.status(403).json('You Need more members');
+            }
 
             const _members = members.map(it => {
                 return {
@@ -242,13 +248,21 @@ const TontineController = ({
             if ((group.admin._id.toString() !== req.query.userId) || group.admin._id.toString() !== (req.query.userId) || group.admin._id.toString() !== (req.query.userId))
                 return res.status(403).json({ message: 'Only admin can invite members' });
 
+            const _user = await User.findById(req.query.userId);
+            if (!_user) {
+                return res.status(404).json('Rambaaa');
+            }
+
             for (const email of emails) {
+                if (_user.email === email) {
+                    continue;
+                }
                 const user = await User.findOne({email: email});
                 if (!user) {
                     sendEmail(email, `Invitation to Join ${group.name}`, `${group.admin.name} invites you to join ${group.name}. Register yourself at http://localhost:8080/login, to succed to join `);
                     continue;
                 }
-                sendInvitation('TontineGroup', group.admin, group._id, user);
+               sendInvitation('TontineGroup', group.admin, group._id, user);
                 group.members.push({
                     userId: user._id,
                     status: 'pending'
@@ -364,9 +378,8 @@ const TontineController = ({
 
             const user = await User.findById(userId);
 
-            if (!user) {
+            if (!user)
                 return res.status(404).json('Unknown User');
-            }
 
             const cycle = await TontineCycle.findById(cycleId);
             console.log("Cycle:", cycle);

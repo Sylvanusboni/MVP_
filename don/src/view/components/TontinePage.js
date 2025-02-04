@@ -178,11 +178,10 @@ export default function TontinePage() {
         </Typography>
       )}
 
-      <Grid container spacing={3}>
+      {/* <Grid container spacing={3}>
         {(tontines.length > 0 ? tontines : admins).map((tontine) => (
           <Grid item xs={12} sm={6} md={4} key={tontine._id}>
             <Card>
-              {/* Invite Icon Positioned at Top-Right */}
             <IconButton
               onClick={() => { setOpenInviteDialog(true); setSelectedTontine(tontine._id); }}
               sx={{ display: 'flex', top: 0, right: 8 }}
@@ -227,7 +226,6 @@ export default function TontinePage() {
                 </Button>
                 )}
 
-                {admins.length > 0 && (
                   <Button variant="contained" color="error" onClick={() => {
                     setOpenCollect(true);
                     setSelectedTontine(tontine);
@@ -235,12 +233,113 @@ export default function TontinePage() {
                  sx={{ ml: 1, mt: 1 }}>
                     Collect Funds
                   </Button>
-                )}
+                
               </CardContent>
             </Card>
           </Grid>
         ))}
-      </Grid>
+      </Grid> */}
+
+          <Grid container spacing={3}>
+          {/* Render Tontines */}
+          {tontines.length > 0 && tontines.map((tontine) => (
+            <Grid item xs={12} sm={6} md={4} key={tontine._id}>
+              <Card>
+                {/* Invite Icon Positioned at Top-Right */}
+                <IconButton
+                  onClick={() => { setOpenInviteDialog(true); setSelectedTontine(tontine._id); }}
+                  sx={{ display: 'flex', top: 0, right: 8 }}
+                  color="primary"
+                >
+                  <PersonAddIcon />
+                </IconButton>
+                <CardContent>
+                  <Typography variant="h6">{tontine.name}</Typography>
+                  <Typography variant="body2">Contribution: ${tontine.contributionAmount}</Typography>
+                  <Typography variant="body2">Cycle Duration: {tontine.cycleDuration} days</Typography>
+                  <Typography variant="body2">Start Date: {new Date(tontine.startDate).toLocaleDateString()}</Typography>
+                  <Typography variant="body2">Status: {tontine.status}</Typography>
+                  {admins.length > 0 && (
+                    <Typography variant="body2">Total Collected: ${tontine.totalCollected}</Typography>
+                  )}
+                  <Button variant="outlined" onClick={() => handleViewClick(tontine)} sx={{ mt: 1 }}>
+                    View
+                  </Button>
+                  {/* Conditional Button for Admin or Member */}
+                  {admins.length > 0 ? (
+                    <Button variant="contained" onClick={() => handleStartTontine(tontine._id)} sx={{ ml: 1, mt: 1 }}>
+                      Start
+                    </Button>
+                  ) : (
+                    <Button variant="contained" onClick={() => { 
+                      setSelectedTontine(tontine); 
+                      setOpenPaymentDialog(true);
+                    }} sx={{ mt: 1 }}>
+                      Pay Contribution
+                    </Button>
+                  )}
+
+                  {/* Collect Funds Button */}
+                  <Button variant="contained" color="error" onClick={() => {
+                    setOpenCollect(true);
+                    setSelectedTontine(tontine);
+                  }} sx={{ ml: 1, mt: 1 }}>
+                    Collect Funds
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+
+          {/* Render Admins */}
+          {admins.length > 0 && admins.map((admin) => (
+            <Grid item xs={12} sm={6} md={4} key={admin._id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6">{admin.name}</Typography>
+                  <Typography variant="body2">
+                  Contribution: ${admin.contributionAmount}
+                </Typography>
+                <Typography variant="body2">
+                  Cycle Duration: {admin.cycleDuration} days
+                </Typography>
+                <Typography variant="body2">
+                  Start Date: {new Date(admin.startDate).toLocaleDateString()}
+                </Typography>
+                <Typography variant="body2">Status: {admin.status}</Typography>
+                {admins.length > 0 && (
+                  <Typography variant="body2">Total Collected: ${admin.totalCollected}</Typography>
+                )}
+                 <Button variant="outlined" onClick={() => handleViewClick(admin)} sx={{ mt: 1 }}>
+                    View
+                  </Button>
+                  {/* Conditional Button for Admin or Member */}
+                  {admins.length > 0 ? (
+                    <Button variant="contained" onClick={() => handleStartTontine(admin._id)} sx={{ ml: 1, mt: 1 }}>
+                      Start
+                    </Button>
+                  ) : (
+                    <Button variant="contained" onClick={() => { 
+                      setSelectedTontine(admin); 
+                      setOpenPaymentDialog(true);
+                    }} sx={{ mt: 1 }}>
+                      Pay Contribution
+                    </Button>
+                  )}
+
+                  {/* Collect Funds Button */}
+                  <Button variant="contained" color="error" onClick={() => {
+                    setOpenCollect(true);
+                    setSelectedTontine(admin);
+                  }} sx={{ ml: 1, mt: 1 }}>
+                    Collect Funds
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+          </Grid>
+
 
        {/* Create Tontine Dialog */}
        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>

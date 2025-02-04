@@ -18,7 +18,7 @@ const groupInvitationSchema = new mongoose.Schema({
     },
     invitedTo: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
+        // required: true,
         ref: 'User',
     },
     status: {
@@ -33,7 +33,7 @@ const groupInvitationSchema = new mongoose.Schema({
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
+        // required: true,
         ref: 'User',
     },
     email: String,

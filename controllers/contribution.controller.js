@@ -145,7 +145,8 @@ const contributionController = ({
 
             const group = await ContributionGroup.findById(groupId).populate('admin');
 
-            if (!group) return res.status(404).json({message: 'Group not found'});
+            if (!group)
+                return res.status(404).json({message: 'Group not found'});
 
             if (group.admin._id.toString() !== userId)
                 return res.status(403).json({ message: 'Only admin can invite members' });

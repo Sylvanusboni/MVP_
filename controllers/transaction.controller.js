@@ -41,6 +41,8 @@ const transactionController = ({
         try {
             const {transactionReference, email, userId} = req.body;
             const amount = parseInt(req.body.amount) / 100;
+            console.log(transactionReference, email);
+            console.log(amount);
 
             if (!transactionReference || !amount) {
                 return res.status(404).json('Need Trans Reference and Amount to confirm');
@@ -58,7 +60,7 @@ const transactionController = ({
                 'Content-Type': 'application/json'
             }
 
-            const response = await axios.get(`https://qa.interswitchng.com/collections/api/v1/gettransaction.json?merchantcode=${merchantCode}&transactionreference=${transactionReference}&amount=${amount}`,
+            const response = await axios.get(`https://qa.interswitchng.com/collections/api/v1/gettransaction.json?merchantcode=${merchantCode}&transactionreference=${transactionReference}&amount=${amount * 100}`,
                 'grant_type=client_credentials',
                 {headers}
             );
@@ -68,6 +70,7 @@ const transactionController = ({
                 transaction.status = 'failed';
             } else {
                 if (transaction.campaignId) {
+                    console.log('Trying to update Campaign Amoun')
                     const campaign = await Campaign.findById(transaction.campaignId);
 
                     if (!campaign)
@@ -80,8 +83,9 @@ const transactionController = ({
                             campaign.contributors.push({
                                 userId: transaction.user,
                                 amount: amount
-                            })
+                            });
                         }
+                        console.log('User Campaign:', userCampaign)
                     } else {
                         const extUser = campaign.externalContributions.find(it => it.email === email);
                         if (extUser) {
@@ -127,6 +131,7 @@ const transactionController = ({
                     await contribution.save();
                 }
                 transaction.status = 'completed';
+                await transaction.save();
             }
             return res.status(200).json("Good");
         } catch (error) {

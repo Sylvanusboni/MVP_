@@ -93,17 +93,27 @@ const invitationController = ({
             invitation.status = status;
 
             if (status === 'declined' || status === 'accepted') {
-                const group = await ((invitation.groupType === 'ContributionGroup') ? 
+                let group = await ((invitation.groupType === 'ContributionGroup') ? 
                 ContributionGroup.findById(invitation.groupId) :
                 TontineGroup.findById(invitation.groupId));
 
                 const member = group.members.find(it => it.userId.toString() === invitation.user.toString());
                 if (!member) {
-                    return res.status(404).json('Never send invitaiton');
-                }
-                member.status = status;
-                if (status === 'declined') {
-                    group.members = group.members.filter(it => it.userId.toString() !== invitation.user.toString());
+                    if (status === 'accepted') {
+                        console.log('Invitaiton: ', invitation)
+                        const user = await User.findOne({email: invitation.email});
+                        console.log('User', user);
+                        group.members.push({
+                            userId: user._id,
+                            status: 'accepted'
+                        });
+                    }
+                    await group.save();
+                } else {
+                    member.status = status;
+                    if (status === 'declined') {
+                        group.members = group.members.filter(it => it.userId.toString() !== invitation.user.toString());
+                    }
                 }
                 await group.save();
             }
